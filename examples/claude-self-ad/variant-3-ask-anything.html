@@ -1,0 +1,21 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Claude v3 — спроси что угодно</title>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script>
+<style>
+.q{position:absolute;left:7vw;right:7vw;top:20vw;font-size:9.4vw;font-weight:900;line-height:1.05;letter-spacing:-.03em}
+.a{position:absolute;left:7vw;right:7vw;top:72vw;border-radius:5vw;padding:5vw 5.4vw;font-size:5vw;font-weight:600;line-height:1.35;box-shadow:0 1.4vw 0 rgba(0,0,0,.18)}
+.df{font:3.4vw/1.5 ui-monospace,Menlo,monospace;border-radius:2vw;padding:2vw 3vw;white-space:pre;margin-top:2vw}
+</style></head><body><script>
+const {seg,eo,pop,set,spring,lerp,cl,type}=E;
+const mk=(bg,ink,q,aBg,aInk,aHtml,cap,hl)=>({dur:2.6,bg,ink,hl,trans:'left',cap,capAt:1.2,
+  html:`<div class="kick" style="color:${ink}">Спроси</div><div class="q" id="q" style="color:${ink}"></div><div class="abs" id="sp" style="left:70vw;top:50vw">${P.spark(20,aInk==='#fff'?'#fff':'#d97757',bg)}</div><div class="a" id="a" style="background:${aBg};color:${aInk}"></div>`,
+  update(t,$){ $('#q').textContent=type(q,t,.1,1.0); const a=spring((t-.9)/.5); set($('#a'),{o:cl(a*2),y:(1-a)*8}); $('#a').innerHTML=aHtml(t); set($('#sp'),{s:spring((t-.5)/.5),y:0}); P.sparkAct($('#sp'),{spin:t*30,blink:P.blink(t),mood:'smile'}); }});
+E.run({hl:'#1f1a17',progress:'bar',scenes:[
+ mk('#d97757','#fff','Объясни блокчейн за 10 секунд','#fff7ef','#1f1a17',t=>type('Это общий журнал записей: каждая новая запись цепляется к прошлой, поэтому тайно переписать историю нельзя.',t,1.0,2.4),'Объясняет *просто*','#1f1a17'),
+ mk('#1f1a17','#f5f0e8','Какой курс доллара будет завтра?','#2b2420','#f5f0e8',t=>`<b style="color:#ffb48a">Точно не знаю.</b> ${type('Этого не знает никто — но могу рассказать, что на него влияет.',t,1.2,2.4)}`,'*Честно* говорит, чего не знает','#d97757'),
+ mk('#f5f0e8','#1f1a17','Найди баг в моём коде','#fff','#1f1a17',t=>`<div style="font-size:4vw;font-weight:700">Налог считался неверно:</div><div class="df" style="background:#ffebe9;color:#a40e26;opacity:${eo(seg(t,1.2,1.5))}">- total = price + tax</div><div class="df" style="background:#dafbe1;color:#116329;opacity:${eo(seg(t,1.7,2.0))}">+ total = price * (1 + tax)</div>`,'Находит *ошибки* и чинит','#d97757'),
+ mk('#2f6b5a','#fff','Перепиши вежливее','#f5f0e8','#1f1a17',t=>`<span style="color:#a40e26;text-decoration:line-through;opacity:${1-eo(seg(t,1.3,1.6))*.5}">Вы опять сорвали сроки!</span><br><span style="color:#116329;font-weight:800">${type('Давайте уточним новые сроки — нам важно успеть.',t,1.6,2.5)}</span>`,'Меняет *тон* под вас','#1f1a17'),
+ {dur:3.0,bg:'#f5f0e8',ink:'#1f1a17',hl:'#d97757',trans:'circle',cap:'Спроси — и *посмотри сам*',capAt:1.2,
+  html:`<div class="abs" id="sp" style="left:30vw;top:34vw">${P.spark(40)}</div><div class="abs" id="t" style="left:0;right:0;top:88vw;text-align:center;font-size:21vw;font-weight:900;letter-spacing:-.05em;color:#1f1a17">Claude</div>`,
+  update(t,$){ set($('#sp'),{s:spring(t/.6)}); P.sparkAct($('#sp'),{spin:t*30,blink:P.blink(t),mood:'smile'}); const k=spring((t-.3)/.5); set($('#t'),{o:cl(k*3),s:1.3-.3*k}); }}
+]});
+</script></body></html>

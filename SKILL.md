@@ -19,7 +19,7 @@ node scripts/render.mjs work/<название>/v1.html --preset vertical-previe
 - `references/engine.js` — движок сцен: фон, субтитры с подсветкой (`*слово*`), прогресс, переходы, easing (`E.pop`, `E.type`, `E.set`).
 - `references/parts.js` — детали: маскот `P.bot`, иконки `P.icon`, окно macOS `P.win`, пузыри чата.
 - `references/design-notes.md` — что делает ролик «живым» (сюжет, хук, ритм, субтитры). **Прочитай перед написанием вариантов.**
-- Примеры готовых роликов: `examples/` (`claude-ad` — 16:9; `chatgpt-ad` — 9:16, 25 с; `duolingo-ad` — 9:16, 40 с, 60 fps с сюжетом и демонстрациями).
+- Примеры готовых роликов: `examples/` (`claude-ad` — 16:9; `chatgpt-ad` — 9:16, 25 с; `duolingo-ad` — 9:16, 40 с, 60 fps с сюжетом и демонстрациями; `claude-self-ad` — 9:16, 39 с, 60 fps, реклама самого Claude с мета-поворотом).
 - Размер файла: ролик 40 с / 60 fps ≈ 10 МБ; если нужен лимит меньше — `--fps 30` или перекодируй `ffmpeg -i in.mp4 -crf 24 out.mp4`.
 
 ## Главные принципы качества

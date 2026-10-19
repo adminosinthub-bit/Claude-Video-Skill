@@ -1,0 +1,112 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Claude — реклама</title>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script>
+<style>
+.kick{position:absolute;left:0;right:0;top:9vw;text-align:center;font-size:3.8vw;font-weight:800;letter-spacing:.22em;text-transform:uppercase;opacity:.55}
+.tk{position:absolute;width:56vw;padding:3.4vw 4.6vw;border-radius:4vw;background:#fff;box-shadow:0 1vw 0 #e0d6c8,0 3vw 8vw rgba(90,60,30,.2);font-size:5.4vw;font-weight:800;color:#1f1a17}
+.cw{position:absolute;left:5vw;right:5vw;top:15vw;height:124vw;background:#161b22;border-radius:4vw;box-shadow:0 4vw 10vw rgba(0,0,0,.5),0 0 0 .25vw #30363d;overflow:hidden}
+.edb{height:7vw;background:#1f252d;display:flex;align-items:center;gap:1.4vw;padding:0 3vw;font-size:2.6vw;color:#8b949e}.edb i{width:2vw;height:2vw;border-radius:50%;display:block}
+.mono{font-family:ui-monospace,Menlo,"DejaVu Sans Mono",monospace}
+.pg{position:absolute;left:27vw;top:26vw;width:46vw;height:60vw;border-radius:2vw;background:repeating-linear-gradient(#fff 0 3.4vw,#e7e0d4 3.4vw 4.2vw);box-shadow:0 1vw 0 #d8cfc0,0 3vw 8vw rgba(60,40,20,.25);border:.3vw solid #e7e0d4}
+.hl{position:absolute;height:3.4vw;background:rgba(255,214,10,.7);border-radius:.6vw}
+.sm{position:absolute;left:7vw;right:7vw;top:30vw;height:68vw;background:#fff;border-radius:5vw;box-shadow:0 1.4vw 0 #e0d6c8,0 4vw 9vw rgba(90,60,30,.18);padding:4vw 5vw;color:#1f1a17}
+.si{display:flex;align-items:center;gap:3vw;font-size:4.5vw;white-space:nowrap;font-weight:700;margin-top:5.2vw}.si b{flex:none;width:9vw;height:9vw;border-radius:50%;background:#d97757;color:#fff;display:grid;place-items:center;font-size:4.8vw}.si em{margin-left:auto;font-style:normal;font-size:3.6vw;color:#8a7d70;background:#f3ece2;border-radius:2vw;padding:.8vw 2vw}
+.chp{position:absolute;background:#2b2420;border:.3vw solid #4a3d35;color:#f5f0e8;font-size:4.4vw;font-weight:800;padding:2vw 4vw;border-radius:4vw}
+.fr{position:absolute;width:26vw;height:34vw;border-radius:2.4vw;display:flex;align-items:flex-end;padding:2vw;font:2.6vw ui-monospace,monospace;color:#fff;font-weight:700}
+</style></head><body><script>
+const {seg,eo,pop,set,spring,lerp,cl,type,count}=E;
+const TERRA='#d97757',CREAM='#f5f0e8',INK='#1f1a17';
+const T=[['Отчёт на 40 страниц',5,24,-5],['Баг в проде',38,39.5,4],['Письмо клиенту',6,55,3],['План на неделю',36,70.5,-4],['Презентация',5,86,5],['Созвон в 15:00',38,101.5,-3],['Договор на подпись',8,117,4]];
+const CODE=`@dp.message(Command("start"))
+async def start(m: Message):
+    scheduler.add_job(remind, "interval",
+        hours=1, args=[m.chat.id])
+    await m.answer("Буду напоминать!")`;
+const SRC=`<scene dur="37">
+  <spark mood="smile" />
+  <caption>Эта реклама — моя работа</caption>
+</scene>
+render({ fps: 60, size: "1080x1920" })`;
+const tg=(s)=>s.replace(/&/g,'&amp;').replace(/<(\/?)(\w+)([^>]*)>/g,(m,a,b,c)=>`<span style="color:#ff7b72">&lt;${a}${b}</span><span style="color:#a5d6ff">${c}</span><span style="color:#ff7b72">&gt;</span>`);
+const fcol=['#d97757','#5b6cf0','#10a37f','#e0a100','#d94f9a','#2b9bd6'];
+const pgs=7;
+E.run({hl:TERRA,progress:'bar',scenes:[
+/* 1. ХУК */
+ {dur:4.4,bg:'linear-gradient(170deg,#f8efe3,#f1e4d6)',ink:INK,cam:[1,1.04],cap:'Задач много. *Времени* нет.',capAt:2.4,
+  html:`<div class="kick" style="color:${INK}">Понедельник, 9:00</div><div class="abs" id="cn" style="left:0;right:0;top:13.5vw;text-align:center;font-size:7.4vw;font-weight:900;letter-spacing:-.03em">задач: 0</div>`+T.map(x=>`<div class="tk" style="left:${x[1]}vw;top:${x[2]}vw">${x[0]}</div>`).join('')+`<div class="abs" id="sp" style="left:70vw;top:104vw;z-index:20">${P.spark(26)}</div><div class="abs" id="sb" style="right:5vw;top:132vw;background:#fff;border-radius:4vw 4vw 1vw 4vw;padding:2vw 3.6vw;font-size:4.2vw;font-weight:800;box-shadow:0 1vw 0 #e0d6c8;z-index:21">Давай по порядку?</div>`,
+  update(t,$,p,$$){ $$('.tk').forEach((e,i)=>{const a=.2+i*.3;const k=spring((t-a)/.55);set(e,{o:cl((t-a)*6),y:lerp(-60,0,Math.min(1,k)),r:T[i][3]*cl(k)})});
+    $('#cn').textContent='задач: '+Math.min(7,Math.max(0,Math.floor((t-.2)/.3)+1)); set($('#sp'),{s:spring((t-2.8)/.5)}); P.sparkAct($('#sp'),{spin:t*20,dx:-3,blink:P.blink(t),mood:t>3.2?'smile':'o'});
+    set($('#sb'),{o:cl(spring((t-3.3)/.4)*2),s:.9+.1*spring((t-3.3)/.4)}); }},
+/* 2. ЗНАКОМСТВО */
+ {dur:2.6,bg:TERRA,ink:'#fff',hl:INK,trans:'circle',cap:'Знакомьтесь: *Claude*',capAt:.9,
+  html:`<div class="abs" id="sp" style="left:27vw;top:30vw">${P.spark(46,'#fff',TERRA)}</div><div class="abs" id="t" style="left:0;right:0;top:86vw;text-align:center;font-size:21vw;font-weight:900;letter-spacing:-.05em;color:#fff">Claude</div><div class="abs" id="s" style="left:0;right:0;top:112vw;text-align:center;font-size:5.6vw;font-weight:700;color:#fff3ea">ИИ-ассистент от Anthropic</div>`,
+  update(t,$){ set($('#sp'),{s:spring(t/.6),r:(1-spring(t/.8))*-90}); P.sparkAct($('#sp'),{spin:t*50,blink:P.blink(t+.5),mood:'smile'}); const k=spring((t-.25)/.5); set($('#t'),{o:cl(k*3),s:1.3-.3*k}); set($('#s'),{o:eo(seg(t,.7,1.2))}); }},
+/* 3. КОД + ТЕСТЫ */
+ {dur:6.8,bg:'#0e1116',ink:'#e8eef5',hl:TERRA,trans:'circle',cam:[1,1.03],cap:'Пишет *рабочий код* и сам запускает тесты',capAt:.6,
+  html:`<div class="kick" style="color:#8b949e">Claude Code</div><div class="cw" id="cw"><div class="edb"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span style="margin-left:2vw">water-bot</span></div>
+  <div class="abs" style="left:4vw;right:4vw;top:10vw;display:flex;flex-direction:column;gap:2.6vw">
+   <div id="me" style="align-self:flex-end;max-width:72vw;opacity:0"><div style="background:${TERRA};color:#fff;font-size:4.2vw;line-height:1.3;padding:2.6vw 3.8vw;border-radius:4vw 4vw 1vw 4vw">Напиши Telegram-бота, который напоминает пить воду</div></div>
+   <div id="pl" style="display:flex;gap:2vw;flex-wrap:wrap;opacity:0"><span class="pc">✓ Проект</span><span class="pc">✓ Расписание</span><span class="pc">✓ Тесты</span></div>
+   <div class="mono" id="cd" style="background:#0d1117;border-radius:2.4vw;padding:3vw;font-size:2.9vw;line-height:1.5;color:#c9d1d9;white-space:pre;min-height:10vw;display:none"></div>
+   <div class="mono" id="tm" style="background:#010409;border-radius:2.4vw;padding:3vw;font-size:3.1vw;line-height:1.55;color:#8b949e;white-space:pre;display:none"></div>
+  </div>
+  <div class="abs" id="inp" style="left:3vw;right:3vw;bottom:3vw;height:12vw;border-radius:6vw;border:.4vw solid #30363d;display:flex;align-items:center;padding:0 4vw;font-size:3.8vw;color:#e8eef5;background:#0d1117"><span id="ty"></span><span id="cr" style="width:.5vw;height:5vw;background:${TERRA};margin-left:.5vw"></span><div style="margin-left:auto;width:8vw;height:8vw;border-radius:50%;background:${TERRA};display:grid;place-items:center">${P.icon('send','#fff',5)}</div></div></div>
+  <style>.pc{background:#1f2a24;color:#56d364;font-size:3.3vw;font-weight:800;padding:1.2vw 3vw;border-radius:3vw}</style>`,
+  update(t,$){ const w=spring(t/.6); set($('#cw'),{o:cl(w*2),y:(1-w)*8}); const q='Напиши Telegram-бота, который напоминает пить воду';
+    $('#ty').textContent=t<2.2?type(q,t,.5,2.0):''; $('#cr').style.opacity=t<2.2?1:0;
+    const m=spring((t-2.2)/.4); set($('#me'),{o:cl(m*2),s:.9+.1*m}); set($('#pl'),{o:eo(seg(t,2.7,3.0))});
+    $('#cd').style.display=t>3.0?'block':'none'; $('#cd').textContent=type(CODE,t,3.1,4.8);
+    $('#tm').style.display=t>4.9?'block':'none';
+    const L1='$ pytest -q', L2='...                       [100%]'; $('#tm').innerHTML=type(L1,t,4.9,5.4)+(t>5.5?'\n'+type(L2,t,5.5,5.9):'')+(t>6.0?'\n<span style="color:#56d364;font-weight:800">3 passed</span> in 0.42s':''); }},
+/* 4. ДЛИННЫЙ ДОКУМЕНТ */
+ {dur:5.2,bg:CREAM,ink:INK,hl:TERRA,trans:'wipe',cap:'Читает *длинные документы* и находит главное',capAt:.4,
+  html:`<div class="kick" style="color:${INK}">Документ</div><div class="abs" id="pn" style="left:0;right:0;top:14vw;text-align:center;font-size:9vw;font-weight:900;letter-spacing:-.03em">Страниц: 1</div>`+
+  Array.from({length:pgs},(_,i)=>`<div class="pg" id="pg${i}" style="z-index:${20-i}"><div class="abs" style="left:3vw;top:3vw;width:20vw;height:3.4vw;background:#c9bda9;border-radius:.6vw"></div></div>`).join('')+
+  `<div class="hl" id="h1" style="left:30vw;top:50vw;width:0;z-index:30"></div><div class="hl" id="h2" style="left:30vw;top:62vw;width:0;z-index:30"></div><div class="hl" id="h3" style="left:30vw;top:72vw;width:0;z-index:30"></div>
+  <div class="abs" id="ds" style="left:68vw;top:104vw">${P.spark(24)}</div><div class="abs" id="db" style="left:20vw;top:114vw;background:#fff;border-radius:4vw 4vw 1vw 4vw;padding:2.4vw 4vw;font-size:4.6vw;font-weight:800;box-shadow:0 1vw 0 #e0d6c8">Нашёл за секунды</div>
+  <div class="sm" id="sm"><div style="font-size:6.4vw;font-weight:900">3 главных пункта</div><div class="si"><b>1</b>Оплата — 30 дней<em>стр. 12</em></div><div class="si"><b>2</b>Штраф — 0,1% в день<em>стр. 27</em></div><div class="si"><b>3</b>Выход — за 14 дней<em>стр. 31</em></div></div>`,
+  update(t,$,p,$$){ $('#pn').textContent=t<2.6?'Страниц: '+count(1,40,t,.3,2.6):'40 страниц → 3 пункта'; $('#pn').style.fontSize=t<2.6?'9vw':'7.4vw'; set($('#ds'),{s:spring((t-3.9)/.5),y:Math.sin(t*3)*.8}); P.sparkAct($('#ds'),{spin:t*30,blink:P.blink(t),mood:'smile'}); set($('#db'),{o:cl(spring((t-4.2)/.4)*2),s:.9+.1*spring((t-4.2)/.4)});
+    for(let i=0;i<pgs;i++){const a=2.0+i*.12;const k=eo(seg(t,a,a+.5));set($('#pg'+i),{x:-k*130,r:-k*18-i*(1-k)*1.2+i*1.5-((i%2)?3:0)});$('#pg'+i).style.opacity=1-k;}
+    [['#h1',.7],['#h2',1.1],['#h3',1.5]].forEach(([id,a])=>{$(id).style.width=(40*eo(seg(t,a,a+.35)))+'vw';$(id).style.opacity=1-eo(seg(t,2.0,2.4))});
+    const s=spring((t-2.6)/.55); set($('#sm'),{o:cl(s*2),y:(1-s)*14}); $$('.si').forEach((e,i)=>set(e,{o:eo(seg(t,3.0+i*.35,3.3+i*.35)),x:(1-eo(seg(t,3.0+i*.35,3.3+i*.35)))*-6})); }},
+/* 5. ТОН */
+ {dur:4.4,bg:CREAM,ink:INK,hl:TERRA,trans:'left',cap:'Подстраивает *тон и стиль* под вас',capAt:.4,
+  html:`<div class="kick" style="color:${INK}">Письмо клиенту</div><div class="abs" style="left:7vw;right:7vw;top:22vw;height:62vw;background:#fff;border-radius:5vw;box-shadow:0 1.4vw 0 #e0d6c8,0 4vw 9vw rgba(90,60,30,.18)"></div>
+  <div class="abs" style="left:12vw;top:27vw;font-size:3.4vw;font-weight:800;color:#8a7d70">КОМУ: КЛИЕНТ</div>
+  <div class="abs" id="bd" style="left:12vw;right:12vw;top:36vw;font-size:5.2vw;font-weight:800;line-height:1.25;color:#a40e26"><span id="bdt">Вы опять сорвали сроки! Это недопустимо.</span></div>
+  <div class="abs" id="gd" style="left:12vw;right:12vw;top:57vw;font-size:5.4vw;font-weight:800;line-height:1.25;color:#116329"></div>
+  <div class="abs" style="left:12vw;right:12vw;top:92vw;height:3vw;border-radius:2vw;background:linear-gradient(90deg,#d94f4f,#e0a100,#10a37f)"></div>
+  <div class="abs" id="kb" style="left:0;top:87.5vw;width:12vw;height:12vw;margin-left:6vw;border-radius:50%;background:#fff;box-shadow:0 1vw 3vw rgba(0,0,0,.3);border:.8vw solid ${TERRA}"></div>
+  <div class="abs" style="left:12vw;top:104vw;font-size:4.2vw;font-weight:800;color:#a40e26">Резко</div><div class="abs" style="right:12vw;top:104vw;font-size:4.2vw;font-weight:800;color:#116329">Дружелюбно</div>
+  ${['Вежливо','Коротко','С решением'].map((x,i)=>`<div class="chp c" style="left:${[8,36,60][i]}vw;top:120vw;background:#fff;color:#1f1a17;border:0;box-shadow:0 1vw 0 #e0d6c8">${x}</div>`).join('')}`,
+  update(t,$,p,$$){ const k=eo(seg(t,.9,2.8)); set($('#kb'),{x:k*(100-12-12-12)}); $('#bdt').style.textDecoration=k>.5?'line-through':'none'; $('#bd').style.opacity=1-.55*eo(seg(t,1.6,2.2));
+    $('#gd').textContent=type('Давайте уточним новые сроки — нам важно успеть.',t,1.9,3.1); $$('.c').forEach((e,i)=>{const s=spring((t-3.2-i*.25)/.4);set(e,{o:cl(s*2),s:.8+.2*s,y:(1-s)*4})}); }},
+/* 6. ЧЕСТНОСТЬ */
+ {dur:4.6,bg:INK,ink:CREAM,hl:TERRA,trans:'circle',cap:'*Честно* говорит, когда не знает',capAt:.4,
+  html:`<div class="kick" style="color:${CREAM}">Честность</div>
+  <div class="abs" id="m" style="right:6vw;top:22vw;max-width:76vw;background:${TERRA};color:#fff;font-size:6.2vw;font-weight:800;line-height:1.2;padding:3.6vw 5vw;border-radius:5vw 5vw 1.2vw 5vw">Какой курс доллара будет завтра?</div>
+  <div class="abs" id="av" style="left:4vw;top:52vw">${P.spark(16)}</div>
+  <div class="abs" id="a1" style="left:23vw;top:50vw;width:72vw;background:#2b2420;border-radius:5vw 5vw 5vw 1.2vw;padding:3.6vw 5vw;font-size:5.4vw;font-weight:700;line-height:1.3;box-shadow:0 1vw 0 #120e0c"><b style="color:#ffb48a">Точно не знаю</b> — этого не знает никто.</div>
+  <div class="abs" id="a2" style="left:23vw;top:84vw;width:72vw;background:#2b2420;border-radius:5vw 5vw 5vw 1.2vw;padding:3.2vw 5vw;font-size:4.6vw;font-weight:600;line-height:1.3;box-shadow:0 1vw 0 #120e0c">Зато расскажу, что на него влияет:</div>`+
+  `<div style="position:absolute;left:5vw;right:5vw;top:106vw;display:flex;gap:3vw;justify-content:center">`+['Ставка ЦБ','Цена нефти','Новости'].map((x,i)=>`<div class="chp c" style="position:static;font-size:3.9vw;padding:2vw 3.2vw">${x}</div>`).join('')+`</div>`+
+  `<div class="abs" id="bg" style="left:14vw;right:14vw;top:124vw;background:#10a37f;color:#fff;border-radius:5vw;padding:3vw 4vw;font-size:4.6vw;font-weight:900;display:flex;align-items:center;gap:3vw;justify-content:center">${P.icon('check','#fff',6)}Не выдумывает ответ</div>`,
+  update(t,$,p,$$){ const f=(id,a,dx)=>{const k=spring((t-a)/.5);set($(id),{o:cl(k*3),s:.9+.1*k,x:(1-k)*dx})}; f('#m',.35,8); f('#av',1.2,-6); f('#a1',1.3,-8); f('#a2',2.3,-8);
+    $$('.c').forEach((e,i)=>{const s=spring((t-3.0-i*.25)/.4);set(e,{o:cl(s*2),s:.8+.2*s})}); const b=spring((t-3.8)/.4); set($('#bg'),{o:cl(b*2),s:.9+.1*b});
+    P.sparkAct($('#av'),{spin:t*20,dx:Math.sin(t*2)*2,blink:P.blink(t),mood:t>1.2&&t<2.2?'flat':'smile'}); }},
+/* 7. МЕТА */
+ {dur:6.6,bg:'#0e1116',ink:'#e8eef5',hl:TERRA,trans:'wipe',cap:'Даже *эта реклама* — моя работа: HTML → видео',capAt:.4,
+  html:`<div class="kick" style="color:#8b949e">Мета</div>
+  <div class="abs" id="ed" style="left:5vw;right:5vw;top:16vw;height:52vw;background:#161b22;border-radius:3.4vw;box-shadow:0 4vw 10vw rgba(0,0,0,.5),0 0 0 .25vw #30363d;overflow:hidden"><div class="edb"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span style="margin-left:2vw">ad.html</span></div><div class="mono" id="cs" style="padding:3.5vw;font-size:3.2vw;line-height:1.6;color:#c9d1d9;white-space:pre"></div></div>
+  <div class="abs" style="left:8vw;top:74vw;font-size:4.2vw;font-weight:700;color:#8b949e">Рендер кадров</div>
+  <div class="abs mono" id="cn" style="left:8vw;right:8vw;top:80vw;font-size:15vw;font-weight:900;color:#fff;letter-spacing:-.03em;font-variant-numeric:tabular-nums">0</div>
+  <div class="abs" style="left:8vw;right:8vw;top:100vw;height:3vw;border-radius:2vw;background:#21262d;overflow:hidden"><div id="pb" style="height:100%;width:0;background:linear-gradient(90deg,${TERRA},#ffb48a)"></div></div>
+  <div id="strip" class="abs" style="left:0;top:108vw;width:400vw;height:36vw">${Array.from({length:14},(_,i)=>`<div class="fr" style="left:${i*30}vw;background:${fcol[i%6]}">кадр ${i*171+1}</div>`).join('')}</div>
+  <div class="abs" id="fl" style="left:14vw;right:14vw;top:114vw;background:#161b22;border-radius:4vw;box-shadow:0 0 0 .25vw #30363d,0 3vw 8vw rgba(0,0,0,.5);padding:4vw 5vw;display:flex;align-items:center;gap:4vw;z-index:5"><div style="width:13vw;height:13vw;border-radius:3vw;background:${TERRA};display:grid;place-items:center">${P.icon('check','#fff',8)}</div><div><div style="font-size:5vw;font-weight:900;color:#fff">claude-ad.mp4</div><div style="font-size:3.4vw;color:#8b949e">1080×1920 · 60 fps</div></div></div>`,
+  update(t,$){ const e=spring(t/.6); set($('#ed'),{o:cl(e*2),y:(1-e)*8}); const n=Math.floor(seg(t,.5,2.4)*SRC.length); $('#cs').innerHTML=tg(SRC.slice(0,n))+(t<3?'<span style="background:#d97757;color:#d97757">_</span>':'');
+    const k=eo(seg(t,2.2,5.0)); $('#cn').textContent=count(0,2232,t,2.2,5.0).toLocaleString('ru-RU').replace(/ /g,' '); $('#pb').style.width=(k*100)+'%';
+    $('#strip').style.transform=`translateX(${-(t-1.6)*20}vw)`; $('#strip').style.opacity=t<5.0?eo(seg(t,2.0,2.5)):1-eo(seg(t,5.0,5.3)); const f=spring((t-5.2)/.5); set($('#fl'),{o:cl(f*2),s:.85+.15*f}); }},
+/* 8. ПРИЗЫВ */
+ {dur:4.0,bg:TERRA,ink:'#fff',hl:INK,trans:'circle',cap:'Начни *прямо сейчас*',capAt:1.5,
+  html:`<div class="abs" id="sp" style="left:27vw;top:22vw">${P.spark(46,'#fff',TERRA)}</div><div class="abs" id="t" style="left:0;right:0;top:78vw;text-align:center;font-size:22vw;font-weight:900;letter-spacing:-.05em;color:#fff">Claude</div><div class="abs" id="s" style="left:0;right:0;top:104vw;text-align:center;font-size:6.6vw;font-weight:800;color:#fff3ea">Спроси — и посмотри сам</div><div class="abs" id="u" style="left:34vw;top:120vw;background:#fff;color:${TERRA};font-size:5.4vw;font-weight:900;padding:2.4vw 6vw;border-radius:6vw;box-shadow:0 1.2vw 0 rgba(0,0,0,.2)">claude.ai</div>`,
+  update(t,$){ set($('#sp'),{s:spring(t/.6),y:Math.sin(t*3)*1.2}); P.sparkAct($('#sp'),{spin:t*50,blink:P.blink(t+.3),mood:'smile'}); const k=spring((t-.3)/.5); set($('#t'),{o:cl(k*3),s:1.3-.3*k}); set($('#s'),{o:eo(seg(t,.9,1.5))}); const u=spring((t-1.3)/.45); set($('#u'),{o:cl(u*2),s:.8+.2*u}); }}
+]});
+</script></body></html>

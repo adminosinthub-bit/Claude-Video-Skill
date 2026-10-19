@@ -6,6 +6,7 @@
  *   P.win(title, inner, cls)      окно macOS с кнопками; внутри — inner
  *   P.me(text) / P.ai(text)       пузыри чата (класс .b-me / .b-ai)
  *   P.owl(size,c,c2) + P.owlLook(root,dx,dy,blinkK)   сова-маскот (.wingL/.wingR — крылья для анимации)
+ *   P.spark(size,c) + P.sparkAct(root,{spin,dx,dy,blink,mood})   маскот-искорка (Claude)
  *   P.flame(size)                 огонёк серии
  *   P.phone(w, inner, style)      макет телефона (внутри .scr); w в vw
  *   P.tapHTML() + P.touch(root,t,[[t,x,y],..],[времена нажатий])   касание пальцем с рябью
@@ -126,6 +127,24 @@
     });
   };
 
+
+  // ---------- искорка: оригинальный маскот-«звёздочка» (.petals вращать, .eyes моргать) ----------
+  const spark = (size = 30, c = '#d97757', face = '#2b1a12') => `
+  <svg class="spark" width="${size}vw" height="${size}vw" viewBox="0 0 100 100" style="overflow:visible">
+    <g class="petals" style="transform-origin:50px 50px">${[0, 45, 90, 135].map((a) => `<rect x="44" y="3" width="12" height="94" rx="6" fill="${c}" transform="rotate(${a} 50 50)"/>`).join('')}</g>
+    <circle cx="50" cy="50" r="28" fill="${c}"/>
+    <g class="eyes" style="transform-box:fill-box;transform-origin:center"><ellipse class="pupil" cx="41" cy="47" rx="4" ry="6" fill="${face}"/><ellipse class="pupil" cx="59" cy="47" rx="4" ry="6" fill="${face}"/></g>
+    <path class="mouth" d="M42 59 Q50 66 58 59" stroke="${face}" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+  </svg>`;
+  // sparkAct(root, {spin, dx, dy, blink, mood}) mood: 'smile' | 'o' | 'flat'
+  const sparkAct = (root, o = {}) => {
+    const pt = root.querySelector('.petals'); if (pt && o.spin !== undefined) pt.style.transform = `rotate(${o.spin}deg)`;
+    root.querySelectorAll('.pupil').forEach((e) => (e.style.transform = `translate(${o.dx || 0}px,${o.dy || 0}px)`));
+    root.querySelectorAll('.eyes').forEach((e) => (e.style.transform = `scaleY(${o.blink === undefined ? 1 : o.blink})`));
+    const m = root.querySelector('.mouth');
+    if (m && o.mood) m.setAttribute('d', o.mood === 'o' ? 'M45 60 Q50 67 55 60 Q50 55 45 60Z' : o.mood === 'flat' ? 'M43 61 L57 61' : 'M42 59 Q50 66 58 59');
+  };
+
   const style = document.createElement('style');
   style.textContent = `
   .mwin{position:absolute;background:var(--win,#fff);color:var(--winInk,#1d1b19);border-radius:3.2vw;overflow:hidden;box-shadow:0 4vw 10vw rgba(20,20,40,.28),0 0 0 .2vw rgba(0,0,0,.08);display:flex;flex-direction:column}
@@ -144,5 +163,5 @@
   .mono{font:3.3vw/1.5 ui-monospace,Menlo,"DejaVu Sans Mono",monospace}
   `;
   document.head.appendChild(style);
-  window.P = { bot, blink, icon, win, me, ai, paths, owl, owlLook, flame, phone, tapHTML, touch, confetti, cfUpdate };
+  window.P = { bot, blink, icon, win, me, ai, paths, owl, owlLook, spark, sparkAct, flame, phone, tapHTML, touch, confetti, cfUpdate };
 })();
