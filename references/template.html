@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --bg:#0e1116; --fg:#f5f7fa; --accent:#ff6a3d; }
+  * { margin:0; box-sizing:border-box; }
+  html,body { width:100vw; height:100vh; overflow:hidden; background:var(--bg); color:var(--fg);
+              font-family: system-ui, "Helvetica Neue", Arial, sans-serif; }
+  .scene { position:absolute; inset:0; display:grid; place-content:center; text-align:center; gap:2vh; }
+  h1 { font-size:8vw; letter-spacing:-.02em;
+       animation: rise 1s cubic-bezier(.2,.8,.2,1) .3s both; }
+  p  { font-size:2.4vw; opacity:.8; animation: rise 1s cubic-bezier(.2,.8,.2,1) .9s both; }
+  .bar { height:.6vh; width:20vw; margin:0 auto; background:var(--accent);
+         transform-origin:left; animation: grow 1.2s ease-out 1.4s both; }
+  @keyframes rise { from { opacity:0; transform:translateY(4vh); } to { opacity:1; transform:none; } }
+  @keyframes grow { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+</style>
+</head>
+<body>
+  <div class="scene">
+    <h1>Заголовок</h1>
+    <div class="bar"></div>
+    <p>Подзаголовок ролика</p>
+  </div>
+</body>
+</html>
