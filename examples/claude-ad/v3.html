@@ -1,0 +1,57 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><style>
+*{margin:0;box-sizing:border-box}
+html,body{width:100vw;height:100vh;overflow:hidden;font-family:system-ui,"Helvetica Neue",Arial,sans-serif;color:#1d1b19}
+#bg{position:absolute;inset:0;background:linear-gradient(135deg,#ffb48a,#e8a0c8 45%,#8f9bff)}
+#hero{position:absolute;left:0;right:0;top:120px;text-align:center;color:#fff;font-size:92px;font-weight:800;letter-spacing:-.03em;text-shadow:0 4px 30px rgba(0,0,0,.15)}
+#spot{position:absolute;left:50%;top:50%;width:1100px;margin-left:-550px;background:rgba(255,255,255,.82);backdrop-filter:blur(30px);border-radius:30px;box-shadow:0 40px 100px rgba(40,20,60,.35),0 0 0 1px rgba(255,255,255,.6);overflow:hidden}
+#row{height:110px;display:flex;align-items:center;padding:0 36px;gap:22px;font-size:40px}
+#mag{font-size:44px;opacity:.5}
+#caret{display:inline-block;width:3px;height:48px;background:#d97757}
+#res{padding:0 40px;overflow:hidden}
+.me{font-size:30px;color:#7a736b;margin:6px 0 18px}
+.ai{display:flex;gap:18px}.av{width:46px;height:46px;border-radius:50%;background:#d97757;color:#fff;display:grid;place-items:center;font-size:26px;flex:none}
+.txt{font-size:30px;line-height:1.4}
+pre{margin-top:14px;background:#1f1d1b;color:#f1e9df;font:22px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:18px 24px;border-radius:14px;white-space:pre}
+#cards{position:absolute;left:90px;right:90px;bottom:90px;display:flex;gap:30px}
+.card{flex:1;background:rgba(255,255,255,.9);border-radius:28px;padding:34px;box-shadow:0 20px 60px rgba(40,20,60,.25)}
+.card b{display:block;font-size:44px;margin-bottom:10px}.card span{font-size:28px;color:#6b645c}
+#end{position:absolute;inset:0;background:#1d1b19;display:grid;place-content:center;text-align:center;color:#f4efe8}
+#end h1{font-size:140px;letter-spacing:-.03em}#end p{font-size:46px;color:#d97757;margin-top:14px}
+</style></head><body>
+<div id="bg"></div><div id="hero">Что угодно. Просто напиши.</div>
+<div id="spot"><div id="row"><span id="mag">⌕</span><span id="typed"></span><span id="caret"></span></div><div id="res"><div class="me" id="me"></div><div class="ai" id="ai"><div class="av">✻</div><div><div class="txt" id="txt"></div><pre id="code"></pre></div></div></div></div>
+<div id="cards"></div>
+<div id="end"><div><h1>Claude</h1><p>Твой ИИ-помощник</p></div></div>
+<script>
+const P="Напиши мне бота для Telegram",T="Готово! Вот бот с командой /start:";
+const C=`from aiogram import Bot, Dispatcher
+from aiogram.filters import CommandStart
+
+dp = Dispatcher()
+
+@dp.message(CommandStart())
+async def start(m):
+    await m.answer("Привет!")`;
+const K=[["Код","От бота до целого приложения"],["Анализ","Документы и данные за секунды"],["Тексты","Любой стиль и язык"]];
+const $=id=>document.getElementById(id);
+$('cards').innerHTML=K.map(k=>`<div class="card"><b>${k[0]}</b><span>${k[1]}</span></div>`).join('');
+const cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));const seg=(t,a,b)=>cl((t-a)/(b-a));const eo=x=>1-Math.pow(1-x,3);
+window.__setTime=ms=>{const t=ms/1000;
+ $('hero').style.opacity=eo(seg(t,0,0.7))*(1-seg(t,7,7.6));
+ const s=eo(seg(t,0.3,1.0));$('spot').style.opacity=s;
+ // spot vertical position: starts center, moves up as result expands
+ const grow=eo(seg(t,4,4.7));
+ $('spot').style.transform=`translateY(${(1-s)*40 - grow*130}px) scale(${0.92+0.08*s})`;
+ $('res').style.height=(grow*(t>5.3?420:360))+'px';
+ $('typed').textContent=P.slice(0,Math.floor(seg(t,1.2,3.4)*P.length));
+ $('caret').style.opacity=t<4?1:0;
+ $('me').textContent=t>4.2?P:'';
+ $('ai').style.opacity=eo(seg(t,4.5,5));
+ $('txt').textContent=T.slice(0,Math.floor(seg(t,4.7,5.6)*T.length));
+ $('code').textContent=C.slice(0,Math.floor(seg(t,5.6,7.8)*C.length));$('code').style.display=t>5.5?'block':'none';
+ document.querySelectorAll('.card').forEach((c,i)=>{const k=eo(seg(t,6.6+i*0.3,7.3+i*0.3));c.style.opacity=k*(1-seg(t,8.6,9));c.style.transform=`translateY(${(1-k)*60}px)`;});
+ $('spot').style.opacity=s*(1-seg(t,8.5,9));
+ const e=eo(seg(t,9,9.7));$('end').style.opacity=e;document.querySelector('#end h1').style.transform=`scale(${0.92+0.08*e})`;
+};
+__setTime(0);
+</script></body></html>

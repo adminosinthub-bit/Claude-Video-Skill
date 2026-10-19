@@ -1,0 +1,70 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><style>
+*{margin:0;box-sizing:border-box}
+html,body{width:100vw;height:100vh;overflow:hidden;background:#f4efe8;font-family:system-ui,"Helvetica Neue",Arial,sans-serif;color:#2a2622}
+#win{position:absolute;left:50%;top:50%;width:1180px;height:700px;margin:-350px 0 0 -590px;background:#fff;border-radius:22px;box-shadow:0 40px 100px rgba(60,40,20,.25),0 0 0 1px rgba(0,0,0,.08);overflow:hidden;display:flex;flex-direction:column}
+#bar{height:56px;background:#f2f0ed;display:flex;align-items:center;padding:0 22px;gap:10px;border-bottom:1px solid #e4e0da}
+.dot{width:16px;height:16px;border-radius:50%}
+#title{margin-left:auto;margin-right:auto;font-size:20px;color:#7a736b;transform:translateX(-30px)}
+#chat{flex:1;padding:34px 44px;display:flex;flex-direction:column;gap:22px;overflow:hidden}
+.me{align-self:flex-end;background:#d97757;color:#fff;font-size:30px;padding:16px 26px;border-radius:26px 26px 6px 26px}
+.ai{display:flex;gap:18px;align-items:flex-start}
+.av{width:48px;height:48px;border-radius:50%;background:#d97757;color:#fff;font-size:28px;display:grid;place-items:center;flex:none}
+.ai .txt{font-size:28px;line-height:1.35}
+pre{margin-top:14px;background:#1f1d1b;color:#f1e9df;font:22px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:20px 26px;border-radius:16px;white-space:pre;min-height:60px}
+#input{margin:0 44px 30px;height:76px;border:2px solid #e4e0da;border-radius:38px;display:flex;align-items:center;padding:0 30px;font-size:30px;gap:4px}
+#send{margin-left:auto;width:48px;height:48px;border-radius:50%;background:#d97757;color:#fff;display:grid;place-items:center;font-size:26px}
+#caret{display:inline-block;width:3px;height:36px;background:#d97757;vertical-align:middle}
+#chips{position:absolute;left:0;right:0;bottom:70px;display:flex;justify-content:center;gap:24px}
+.chip{background:#2a2622;color:#f4efe8;font-size:36px;padding:18px 38px;border-radius:60px}
+#tag{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+#tag h1{font-size:130px;letter-spacing:-.03em}#tag p{font-size:44px;color:#7a736b;margin-top:14px}
+#tag b{color:#d97757}
+</style></head><body>
+<div id="win"><div id="bar"><i class="dot" style="background:#ff5f57"></i><i class="dot" style="background:#febc2e"></i><i class="dot" style="background:#28c840"></i><span id="title">Новый чат</span></div>
+<div id="chat"><div class="me" id="me" style="opacity:0">Напиши мне бота для Telegram</div>
+<div class="ai" id="ai" style="opacity:0"><div class="av">✻</div><div><div class="txt" id="txt"></div><pre id="code"></pre></div></div></div>
+<div id="input"><span id="typed"></span><span id="caret"></span><div id="send">↑</div></div></div>
+<div id="chips"></div>
+<div id="tag"><div><h1>Просто <b>попроси</b></h1><p>Claude — ИИ, который делает дело</p></div></div>
+<script>
+const P="Напиши мне бота для Telegram";
+const T="Готово! Вот бот с командой /start:";
+const C=`import asyncio
+from aiogram import Bot, Dispatcher
+from aiogram.filters import CommandStart
+
+dp = Dispatcher()
+
+@dp.message(CommandStart())
+async def start(m):
+    await m.answer("Привет! Я твой бот")
+
+asyncio.run(dp.start_polling(Bot(TOKEN)))`;
+const names=["Код","Анализ","Тексты","Исследования"];
+document.getElementById('chips').innerHTML=names.map(n=>`<div class="chip">${n}</div>`).join('');
+const $=id=>document.getElementById(id);
+const cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const seg=(t,a,b)=>cl((t-a)/(b-a));
+const eo=x=>1-Math.pow(1-x,3);
+window.__setTime=ms=>{const t=ms/1000;
+ const win=$('win'),inb=eo(seg(t,0.1,1.0));
+ let s=0.9+0.1*inb,op=inb,x=0;
+ const out=eo(seg(t,8.4,9.2));
+ s*=1-0.25*out;op*=1-out;x=-out*200;
+ win.style.transform=`translateX(${x}px) scale(${s})`;win.style.opacity=op;
+ const n=Math.floor(seg(t,1.2,3.2)*P.length);
+ $('typed').textContent=t<3.5?P.slice(0,n):"";
+ $('caret').style.opacity=t<3.5&&(Math.floor(t*2)%2==0||t<3.2)?1:0;
+ $('send').style.transform=`scale(${1+0.25*Math.sin(cl(seg(t,3.2,3.5))*Math.PI)})`;
+ const me=eo(seg(t,3.5,4.0));$('me').style.opacity=me;$('me').style.transform=`translateY(${(1-me)*40}px)`;
+ $('title').textContent=t>3.5?"Бот для Telegram":"Новый чат";
+ const ai=eo(seg(t,4.3,4.8));$('ai').style.opacity=ai;
+ $('txt').textContent=T.slice(0,Math.floor(seg(t,4.5,5.5)*T.length));
+ $('code').textContent=C.slice(0,Math.floor(seg(t,5.5,8.2)*C.length));
+ $('code').style.display=t>5.4?'block':'none';
+ document.querySelectorAll('.chip').forEach((c,i)=>{const k=eo(seg(t,7.2+i*0.25,7.8+i*0.25));
+  const o=1-seg(t,8.4,8.9);c.style.opacity=k*o;c.style.transform=`translateY(${(1-k)*30}px)`;});
+ const tg=eo(seg(t,8.9,9.7));$('tag').style.opacity=tg;$('tag').style.transform=`scale(${0.95+0.05*tg})`;
+};
+__setTime(0);
+</script></body></html>

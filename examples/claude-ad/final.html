@@ -1,0 +1,70 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><style>
+*{margin:0;box-sizing:border-box}
+html,body{width:100vw;height:100vh;overflow:hidden;background:#0d0d10;font-family:system-ui,"Helvetica Neue",Arial,sans-serif;color:#f3f1ee}
+#glow{position:absolute;right:-200px;top:-200px;width:1100px;height:1100px;background:radial-gradient(circle,rgba(217,119,87,.35),transparent 65%)}
+#left{position:absolute;left:100px;top:0;bottom:0;width:800px;display:flex;flex-direction:column;justify-content:center}
+#kick{font-size:30px;letter-spacing:.25em;color:#d97757;text-transform:uppercase;margin-bottom:30px}
+#big{font-size:96px;line-height:1.05;font-weight:800;letter-spacing:-.03em;height:130px;position:relative}
+#big span{position:absolute;left:0;top:0;white-space:nowrap}
+#sub{font-size:38px;color:#a7a29b;margin-top:20px;line-height:1.35;height:110px;position:relative}
+#sub span{position:absolute;left:0;top:0}
+#prog{display:flex;gap:14px;margin-top:50px}.pg{width:70px;height:6px;border-radius:3px;background:#2b2b31;overflow:hidden}.pg i{display:block;height:100%;background:#d97757;width:0}
+#win{position:absolute;right:70px;top:50%;width:900px;height:780px;margin-top:-390px;background:#1c1c20;border-radius:22px;box-shadow:0 40px 120px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.1);overflow:hidden;display:flex;flex-direction:column}
+#bar{height:54px;background:#2a2a30;display:flex;align-items:center;padding:0 20px;gap:10px}
+.dot{width:15px;height:15px;border-radius:50%}
+#chat{flex:1;padding:30px 34px;display:flex;flex-direction:column;gap:20px;overflow:hidden}
+.me{align-self:flex-end;background:#d97757;color:#fff;font-size:34px;padding:14px 24px;border-radius:24px 24px 6px 24px}
+.ai{display:flex;gap:16px;align-items:flex-start}.av{width:44px;height:44px;border-radius:50%;background:#d97757;display:grid;place-items:center;font-size:26px;flex:none}
+.txt{font-size:31px;line-height:1.35}
+pre{margin-top:12px;background:#0d0d10;color:#f1e9df;font:24px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:18px 22px;border-radius:14px;white-space:pre}
+#input{margin:0 34px 26px;height:70px;border:2px solid #36363d;border-radius:35px;display:flex;align-items:center;padding:0 28px;font-size:32px}
+#caret{display:inline-block;width:3px;height:34px;background:#d97757}
+#end{position:absolute;inset:0;background:linear-gradient(135deg,#ffb48a,#e8a0c8 45%,#8f9bff);display:grid;place-content:center;text-align:center}
+#end h1{font-size:170px;letter-spacing:-.03em;color:#fff;text-shadow:0 6px 40px rgba(0,0,0,.18)}#end p{font-size:56px;color:#1d1b19;margin-top:16px;font-weight:600}
+</style></head><body>
+<div id="glow"></div>
+<div id="left"><div id="kick">Claude умеет</div><div id="big"></div><div id="sub"></div><div id="prog"></div></div>
+<div id="win"><div id="bar"><i class="dot" style="background:#ff5f57"></i><i class="dot" style="background:#febc2e"></i><i class="dot" style="background:#28c840"></i></div>
+<div id="chat"><div class="me" id="me" style="opacity:0">Напиши мне бота для Telegram</div>
+<div class="ai" id="ai" style="opacity:0"><div class="av">✻</div><div><div class="txt" id="txt"></div><pre id="code"></pre></div></div></div>
+<div id="input"><span id="typed"></span><span id="caret"></span></div></div>
+<div id="end"><div><h1>Claude</h1><p>Что угодно. Просто напиши.</p></div></div>
+<script>
+const P="Напиши мне бота для Telegram",T="Готово! Бот с командой /start:";
+const C=`from aiogram import Bot, Dispatcher
+from aiogram.filters import CommandStart
+
+dp = Dispatcher()
+
+@dp.message(CommandStart())
+async def start(m):
+    await m.answer("Привет!")`;
+const F=[["Пишет код","Боты, сайты, скрипты — от идеи до рабочего результата"],["Думает глубоко","Разбирает сложные задачи по шагам"],["Пишет тексты","Статьи, письма, переводы на любом языке"],["Анализирует","Документы, таблицы и данные за секунды"]];
+const $=id=>document.getElementById(id);
+$('big').innerHTML=F.map(f=>`<span>${f[0]}</span>`).join('');
+$('sub').innerHTML=F.map(f=>`<span>${f[1]}</span>`).join('');
+$('prog').innerHTML=F.map(()=>`<div class="pg"><i></i></div>`).join('');
+const cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));const seg=(t,a,b)=>cl((t-a)/(b-a));const eo=x=>1-Math.pow(1-x,3);
+window.__setTime=ms=>{const t=ms/1000;
+ // window in
+ const w=eo(seg(t,0.2,1.1));$('win').style.opacity=w;$('win').style.transform=`translateX(${(1-w)*120}px)`;
+ $('kick').style.opacity=eo(seg(t,0,0.6));
+ // features: 4 slots from 0.6, 2s each => up to 8.6 ; but chat occurs in parallel
+ const slot=2,t0=0.6;
+ document.querySelectorAll('#big span').forEach((s,i)=>{const a=t0+i*slot;const inn=eo(seg(t,a,a+0.5)),out=i==3?0:eo(seg(t,a+slot-0.4,a+slot));
+  s.style.opacity=inn*(1-out);s.style.transform=`translateY(${(1-inn)*50-out*50}px)`;});
+ document.querySelectorAll('#sub span').forEach((s,i)=>{const a=t0+i*slot+0.2;const inn=eo(seg(t,a,a+0.5)),out=i==3?0:eo(seg(t,a+slot-0.5,a+slot-0.1));
+  s.style.opacity=inn*(1-out);});
+ document.querySelectorAll('.pg i').forEach((p,i)=>{p.style.width=(seg(t,t0+i*slot,t0+(i+1)*slot)*100)+'%';});
+ // chat
+ const n=Math.floor(seg(t,1.3,3.3)*P.length);$('typed').textContent=t<3.6?P.slice(0,n):"";
+ $('caret').style.opacity=t<3.6?1:0;
+ const me=eo(seg(t,3.6,4.1));$('me').style.opacity=me;$('me').style.transform=`translateY(${(1-me)*30}px)`;
+ $('ai').style.opacity=eo(seg(t,4.3,4.8));
+ $('txt').textContent=T.slice(0,Math.floor(seg(t,4.5,5.4)*T.length));
+ $('code').textContent=C.slice(0,Math.floor(seg(t,5.4,8.3)*C.length));$('code').style.display=t>5.3?'block':'none';
+ const e=eo(seg(t,8.8,9.5));$('end').style.opacity=e;$('end').style.pointerEvents='none';
+ document.querySelector('#end h1').style.transform=`scale(${0.9+0.1*e})`;
+};
+__setTime(0);
+</script></body></html>
