@@ -1,0 +1,46 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>ChatGPT v2 — продуктовое демо</title>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script>
+<style>
+:root{--accent:#10a37f}
+.card{position:absolute;left:7vw;right:7vw;background:#fff;border-radius:6vw;box-shadow:0 1.5vw 0 #d9d5cb,0 5vw 9vw rgba(60,50,20,.18);padding:5vw}
+.inp{display:flex;align-items:center;gap:3vw;border-radius:5vw;background:#f3f1ec;padding:3.4vw 4vw;font-size:4.4vw;font-weight:600;color:#1d2418;min-height:14vw}
+.send{margin-left:auto;flex:none;width:9vw;height:9vw;border-radius:50%;background:#1d2418;display:grid;place-items:center}
+.ans{margin-top:4vw;font-size:4.6vw;line-height:1.4;color:#1d2418}
+.lang{position:absolute;left:10vw;right:10vw;height:25vw;border-radius:5vw;background:#fff;box-shadow:0 1.2vw 0 #d9d5cb,0 4vw 8vw rgba(60,50,20,.16);display:flex;align-items:center;gap:4vw;padding:0 6vw;font-size:7vw;font-weight:800;color:#1d2418}
+.lang small{font-size:3.6vw;font-weight:700;color:#fff;background:#1d2418;border-radius:2vw;padding:1vw 2vw}
+.bar{position:absolute;bottom:0;width:15vw;border-radius:2vw 2vw 0 0;background:#1d2418;transform-origin:bottom}
+.dcode{font:3.4vw/1.55 ui-monospace,Menlo,"DejaVu Sans Mono",monospace;color:#dfe8e4;white-space:pre;padding:5vw}
+</style></head><body><script>
+const {seg,eo,pop,set,type,cl,lerp}=E;
+const Q='Объясни квантовую физику как пятикласснику';
+const A='Представь мячик, который может быть сразу в двух местах, пока ты на него не посмотрел. Так ведут себя крошечные частицы.';
+const CODE=`def fizzbuzz(n):
+    for i in range(1, n + 1):
+        if i % 15 == 0:
+            print("FizzBuzz")
+        elif i % 3 == 0:
+            print("Fizz")
+        elif i % 5 == 0:
+            print("Buzz")
+        else:
+            print(i)`;
+const bars=[['Q1',28],['Q2',40],['Q3',34],['Q4',66]];
+E.run({hl:'#c8f04a',progress:'segments',scenes:[
+ {dur:4.4,bg:'#ece9e2',ink:'#1d2418',hlInk:'#1d2418',capPos:'top',cap:'Спроси *что угодно*',
+  html:`<div class="card" id="c" style="top:42vw"><div class="inp"><span id="q"></span><div class="send">${P.icon('send','#fff',5)}</div></div><div class="ans" id="a"></div></div><div class="abs" id="b" style="right:6vw;top:118vw">${P.bot(30)}</div>`,
+  update(t,$,p,$$){ const c=pop(t,.2,.5); set($('#c'),{o:cl(c*2),s:.92+.08*c}); $('#q').textContent=type(Q,t,.7,2.0);
+   $('#a').textContent=type(A,t,2.2,4.2); set($('#b'),{s:pop(t,2.0,.5),y:Math.sin(t*3)*.8}); $$('.eye').forEach(e=>e.style.transform=`scaleY(${P.blink(t)})`); }},
+ {dur:3.8,bg:'#ece9e2',ink:'#1d2418',hlInk:'#1d2418',capPos:'top',cap:'Пиши *код*',
+  html:P.win('fizzbuzz.py','<div class="dcode" id="cd"></div>','dk').replace('class="mwin dk"','style="left:7vw;top:42vw;width:86vw;height:96vw;--win:#14201b;--winBar:#22302a" class="mwin"')+`<div class="abs" id="ok" style="left:12vw;top:128vw;background:#c8f04a;border-radius:6vw;padding:3vw 5vw;font-size:5vw;font-weight:800;color:#1d2418;display:flex;gap:2vw;align-items:center">${P.icon('check','#1d2418',6)}Тесты пройдены</div>`,
+  update(t,$){ const w=pop(t,.15,.5); set($('.mwin'),{o:cl(w*2),s:.92+.08*w}); $('#cd').textContent=type(CODE,t,.6,2.9); set($('#ok'),{o:cl(pop(t,3.0,.4)*2),s:pop(t,3.0,.4)}); }},
+ {dur:3.8,bg:'#ece9e2',ink:'#1d2418',hlInk:'#1d2418',capPos:'top',cap:'Переводи *мгновенно*',
+  html:[['RU','Привет, мир!'],['EN','Hello, world!'],['ES','¡Hola, mundo!'],['DE','Hallo, Welt!']].map((l,i)=>`<div class="lang" style="top:${44+i*30}vw"><small>${l[0]}</small>${l[1]}</div>`).join(''),
+  update(t,$,p,$$){ $$('.lang').forEach((e,i)=>{const k=pop(t,.3+i*.35,.5);set(e,{o:cl(k*2),x:(1-k)*(i%2?30:-30),s:.95+.05*k})}) }},
+ {dur:3.8,bg:'#ece9e2',ink:'#1d2418',hlInk:'#1d2418',capPos:'top',cap:'Анализируй *данные*',
+  html:`<div class="card" style="top:42vw;height:84vw"><div style="font-size:4.4vw;font-weight:700;color:#8a857a">Продажи по кварталам</div><div id="ch" class="abs" style="left:8vw;right:8vw;top:16vw;bottom:14vw">${bars.map((b,i)=>`<div class="bar" style="left:${i*20}vw;height:${b[1]}vw;background:${i==3?'#10a37f':'#1d2418'}"></div><div class="abs" style="left:${i*20}vw;width:15vw;bottom:-9vw;text-align:center;font-size:4vw;font-weight:700">${b[0]}</div>`).join('')}</div></div><div class="abs" id="ins" style="left:10vw;right:10vw;top:132vw;background:#fff;border-radius:5vw;box-shadow:0 1.2vw 0 #d9d5cb;padding:4vw 5vw;display:flex;gap:3vw;align-items:center;font-size:4.6vw;font-weight:600;color:#1d2418">${P.icon('spark','#10a37f',8)}<span>Пик продаж — в четвёртом квартале</span></div>`,
+  update(t,$,p,$$){ $$('.bar').forEach((e,i)=>{e.style.transform=`scaleY(${eo(seg(t,.5+i*.25,1.3+i*.25))})`}); set($('#ins'),{o:eo(seg(t,2.2,2.7)),y:(1-eo(seg(t,2.2,2.7)))*4}); }},
+ {dur:3.6,bg:'#c8f04a',ink:'#1d2418',hl:'#1d2418',hlInk:'#c8f04a',capPos:'top',cap:'Твой *помощник* на каждый день',
+  html:`<div class="abs" id="b" style="left:20vw;top:54vw">${P.bot(60)}</div><div class="abs" id="t" style="left:0;right:0;top:122vw;text-align:center;font-size:17vw;font-weight:900;letter-spacing:-.04em;color:#1d2418">ChatGPT</div>`,
+  update(t,$,p,$$){ set($('#b'),{s:pop(t,.2,.6),y:Math.sin(t*3)}); $('.armR').style.transform=`rotate(${-30+Math.sin(t*9)*22}deg)`; $$('.eye').forEach(e=>e.style.transform=`scaleY(${P.blink(t+.8)})`); const a=eo(seg(t,.8,1.4)); set($('#t'),{o:a,y:(1-a)*5}); }}
+]});
+</script></body></html>

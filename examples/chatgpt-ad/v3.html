@@ -1,0 +1,31 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>ChatGPT v3 — типографика</title>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script>
+<style>
+.big{position:absolute;left:0;right:0;text-align:center;font-weight:900;letter-spacing:-.05em;line-height:.9;white-space:nowrap}
+.sub{position:absolute;left:0;right:0;text-align:center;font-weight:700;font-size:6vw}
+.stk{position:absolute;font-weight:800;font-size:5.4vw;padding:2vw 4vw;border-radius:10vw;border:.7vw solid currentColor}
+.spot{position:absolute;left:6vw;right:6vw;background:rgba(255,255,255,.96);border-radius:8vw;box-shadow:0 5vw 12vw rgba(0,0,0,.5);overflow:hidden}
+.srow{height:17vw;display:flex;align-items:center;gap:3vw;padding:0 6vw;font-size:4.6vw;font-weight:600;color:#1d1b19}
+.res{padding:0 6vw;font-size:4.6vw;line-height:1.45;color:#1d1b19;overflow:hidden}
+.mq{position:absolute;left:0;white-space:nowrap;font-weight:900;font-size:9vw;letter-spacing:-.03em}
+</style></head><body><script>
+const {seg,eo,pop,set,type,cl,lerp}=E;
+const words=[['ПИШЕТ','письма, статьи, посты','#ffe14d','#111',24,'текст'],['КОДИТ','от скрипта до приложения','#0b0f0d','#10a37f',24,'код'],['ПЕРЕВОДИТ','на десятки языков','#ff8fc7','#111',14.5,'язык'],['СЧИТАЕТ','таблицы, формулы, данные','#4f6bff','#fff',19,'данные'],['ОБЪЯСНЯЕТ','сложное — простыми словами','#10a37f','#fff',13.5,'ясно']];
+const Q='Составь план поездки в Токио на 3 дня';
+const R=['День 1 — Асакуса и Сэнсо-дзи','День 2 — Сибуя и Харадзюку','День 3 — Акихабара и Уэно'];
+const sc=words.map((w,i)=>({dur:1.5,bg:w[2],ink:w[3],trans:'none',
+  html:`<div class="big" id="w" style="top:62vw;font-size:${w[4]}vw;color:${w[3]}">${w[0]}</div><div class="sub" id="s" style="top:100vw;color:${w[3]}">${w[1]}</div><div class="stk" id="k" style="left:8vw;top:30vw;color:${w[3]};transform:rotate(-6deg)">#${w[5]}</div>`,
+  update(t,$){ const k=pop(t,0,.28); set($('#w'),{o:cl(k*3),s:1.35-.35*k}); set($('#s'),{o:eo(seg(t,.25,.5)),y:(1-eo(seg(t,.25,.5)))*3}); set($('#k'),{s:pop(t,.15,.3),r:-6}); }}));
+E.run({hl:'#10a37f',progress:false,scenes:[...sc,
+ {dur:5.6,bg:'#0b0f0d',ink:'#fff',hl:'#10a37f',trans:'none',capPos:'bottom',cap:'Спроси — *получи план*',capAt:3.4,
+  html:`<div class="big" id="h" style="top:14vw;font-size:11vw;color:#fff;line-height:1">ВСЁ ЭТО —<br><span style="color:#10a37f">В ОДНОМ ЧАТЕ</span></div><div class="spot" id="sp" style="top:66vw"><div class="srow"><span style="opacity:.45">${P.icon('search','#1d1b19',6)}</span><span id="q"></span><span id="cr" style="width:.5vw;height:6vw;background:#10a37f"></span></div><div class="res" id="r"></div></div>`,
+  update(t,$){ set($('#h'),{o:eo(seg(t,0,.4)),s:.9+.1*eo(seg(t,0,.4))}); const s=pop(t,.2,.5); set($('#sp'),{o:cl(s*2),s:.92+.08*s});
+    $('#q').textContent=type(Q,t,.7,2.2); $('#cr').style.opacity=t<2.4?1:0;
+    $('#r').style.height=(eo(seg(t,2.4,2.9))*50)+'vw';
+    $('#r').innerHTML=R.map((x,i)=>`<div style="opacity:${eo(seg(t,2.8+i*.45,3.2+i*.45))};padding:2vw 0;font-weight:${i==0?700:600}">${x}</div>`).join(''); }},
+ {dur:3.4,bg:'#10a37f',ink:'#fff',hl:'#0b0f0d',trans:'none',cap:'Спроси. *Получи.*',capAt:1,
+  html:`<div class="abs" id="b" style="left:30vw;top:20vw">${P.bot(40,'#0b0f0d')}</div><div class="big" id="t" style="top:76vw;font-size:21vw;color:#fff">ChatGPT</div>`+[0,1].map(i=>`<div class="mq" id="m${i}" style="top:${108+i*14}vw;color:${i?'rgba(255,255,255,.35)':'#0b0f0d'}">${'СПРОСИ · ПОЛУЧИ · '.repeat(4)}</div>`).join(''),
+  update(t,$){ set($('#b'),{s:pop(t,0,.5),y:Math.sin(t*3)}); $('#b .eye')&&document.querySelectorAll('#b .eye').forEach(e=>e.style.transform=`scaleY(${P.blink(t+.3)})`);
+    const k=pop(t,.2,.4); set($('#t'),{o:cl(k*3),s:1.3-.3*k}); $('#m0').style.left=(-t*18)+'vw'; $('#m1').style.left=(-120+t*18)+'vw'; }}
+]});
+</script></body></html>

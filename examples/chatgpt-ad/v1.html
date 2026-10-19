@@ -1,0 +1,55 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>ChatGPT v1 — маскот</title>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script>
+<style>
+.msg{position:absolute;background:#fff;border-radius:5vw;padding:3vw 5vw;font-size:6.4vw;font-weight:700;box-shadow:0 2vw 5vw rgba(60,40,120,.18);color:#1d1b19}
+.tile{position:absolute;width:42vw;height:31vw;border-radius:5vw;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vw;font-size:5vw;font-weight:800;color:#fff}
+.spk{position:absolute}
+.in{position:absolute;left:3vw;right:3vw;bottom:3vw;height:12vw;border-radius:6vw;border:.4vw solid #d9dde3;display:flex;align-items:center;padding:0 3.5vw;font-size:4vw;background:#fff}
+.in .send{margin-left:auto;width:8vw;height:8vw;border-radius:50%;background:#10a37f;display:grid;place-items:center}
+.code{margin-top:2vw;background:#101418;color:#e7f3ef;border-radius:2.4vw;padding:2.4vw 3vw;white-space:pre;font:2.8vw/1.5 ui-monospace,Menlo,"DejaVu Sans Mono",monospace}
+.card{position:absolute;left:10vw;right:10vw;background:#fff;border-radius:5vw;box-shadow:0 3vw 8vw rgba(120,80,0,.25);padding:6vw;color:#1d1b19}
+</style></head><body><script>
+const {seg,eo,pop,set,type,lerp,cl} = E;
+const CODE=`from aiogram import Bot, Dispatcher
+from aiogram.filters import CommandStart
+
+dp = Dispatcher()
+
+@dp.message(CommandStart())
+async def start(m):
+    await m.answer("Привет!")`;
+const msgs=[['Срочно!',16,6,-3],['Нужен текст на сайт',36,null,2],['И ещё код для бота',56,8,-2],['К утру',76,null,3]];
+const abil=[['doc','Тексты','#ef6c4d'],['code','Код','#5b6cf0'],['globe','Перевод','#10a37f'],['chart','Анализ','#e0a100'],['bulb','Идеи','#d94f9a'],['image','Картинки','#2b9bd6']];
+E.run({hl:'#ff6a3d',progress:'bar',scenes:[
+ {dur:2.8,bg:'linear-gradient(160deg,#fde7d8,#e6e0ff 60%,#d8f0ff)',ink:'#1d1b19',cap:'Знакомо? *Дедлайн* горит',capAt:.9,
+  html:msgs.map(m=>`<div class="msg" style="top:${m[1]}vw;${m[2]!==null?'left:'+m[2]+'vw':'right:8vw'}">${m[0]}</div>`).join(''),
+  update(t,$,p,$$){ $$('.msg').forEach((e,i)=>{const k=pop(t,.15+i*.4,.4);set(e,{o:cl(k*2),s:k,r:msgs[i][3]*(1)})}) }},
+ {dur:2.6,bg:'linear-gradient(170deg,#0c7f63,#10a37f 55%,#58dcb6)',ink:'#fff',hl:'#0b2e27',cap:'Тут выходит *ChatGPT*',capAt:.8,
+  html:`<div class="abs" id="b" style="left:20vw;top:48vw">${P.bot(60)}</div>`+[[12,40,7],[82,62,6],[16,100,5],[78,110,8]].map((s,i)=>`<div class="spk" style="left:${s[0]}vw;top:${s[1]}vw">${P.icon('spark','#fff',s[2])}</div>`).join(''),
+  update(t,$,p,$$){ const k=pop(t,.1,.6); set($('#b'),{s:k,y:Math.sin(t*3)*1.2});
+    $$('.eye').forEach(e=>e.style.transform=`scaleY(${P.blink(t+1.5)})`);
+    $$('.spk').forEach((e,i)=>set(e,{o:eo(seg(t,.5+i*.15,1)),s:.8+.2*Math.sin(t*5+i),r:t*60})) }},
+ {dur:5.2,bg:'#e9edf2',ink:'#1d1b19',cap:'Попросил — *получил*',capAt:3.3,
+  html:P.win('ChatGPT',`<div id="ch" class="abs" style="left:4vw;right:4vw;top:4vw;bottom:19vw;display:flex;flex-direction:column;gap:3vw"><div id="me" style="align-self:flex-end;max-width:70vw;opacity:0"></div><div id="ai" style="opacity:0"></div></div>
+   <div class="in"><span id="ty"></span><span id="cr" style="width:.5vw;height:5vw;background:#10a37f;margin-left:.5vw"></span><div class="send">${P.icon('send','#fff',5)}</div></div>`).replace('class="mwin ','style="left:6vw;top:20vw;width:88vw;height:106vw" class="mwin '),
+  update(t,$){ const q='Напиши мне бота для Telegram';
+    const w=eo(seg(t,0,.5)); set($('.mwin'),{o:w,y:(1-w)*6});
+    $('#ty').textContent=t<2.0?type(q,t,.4,1.8):''; $('#cr').style.opacity=t<2.0?1:0;
+    const m=pop(t,2.0,.35); $('#me').innerHTML=P.me(q); set($('#me'),{o:cl(m*2),s:.9+.1*m});
+    $('#ai').innerHTML=P.ai('<b>Готово!</b> Вот бот с командой /start:')+`<div class="code">${type(CODE,t,2.9,4.9)}</div>`;
+    $('#ai').style.opacity=eo(seg(t,2.5,2.8)); }},
+ {dur:4,bg:'#10161c',ink:'#fff',hl:'#10a37f',cap:'Пишет, считает, *переводит*',capAt:2.2,
+  html:`<div class="abs" style="left:0;right:0;top:14vw;text-align:center;color:#fff;font-size:8vw;font-weight:900;letter-spacing:-.02em" id="h">ChatGPT умеет</div>`+abil.map((a,i)=>`<div class="tile" style="background:${a[2]};left:${i%2?52:6}vw;top:${34+Math.floor(i/2)*35}vw">${P.icon(a[0],'#fff',11)}${a[1]}</div>`).join(''),
+  update(t,$,p,$$){ set($('#h'),{o:eo(seg(t,0,.5))}); $$('.tile').forEach((e,i)=>{const k=pop(t,.3+i*.22,.45);set(e,{o:cl(k*2),s:k,r:(i%2?1:-1)*(1-k)*8})}) }},
+ {dur:3.2,bg:'#ffd166',ink:'#1d1b19',hl:'#1d1b19',cap:'Задача на час — *за секунды*',capAt:1.2,
+  html:`<div class="card" style="top:40vw" id="c"><div style="font-size:4.2vw;color:#8a6a00;font-weight:700;margin-bottom:2vw">ЗАДАЧА</div><div style="font-size:6vw;font-weight:800;line-height:1.2">Написать письмо клиенту</div>
+   <div style="display:flex;align-items:center;gap:3vw;margin-top:6vw"><div id="tm" style="font-size:16vw;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums">0.0 с</div><div id="ok" style="width:14vw;height:14vw;border-radius:50%;background:#10a37f;display:grid;place-items:center;margin-left:auto">${P.icon('check','#fff',9)}</div></div></div>`,
+  update(t,$){ const c=pop(t,.05,.5); set($('#c'),{o:cl(c*2),s:c}); const v=eo(seg(t,.5,1.9))*3;$('#tm').textContent=v.toFixed(1)+' с';
+    set($('#ok'),{s:pop(t,1.9,.4)}); }},
+ {dur:3.6,bg:'linear-gradient(170deg,#0c7f63,#10a37f 55%,#58dcb6)',ink:'#fff',hl:'#0b2e27',cap:'Попробуй *прямо сейчас*',capAt:1.6,
+  html:`<div class="abs" id="b" style="left:26vw;top:22vw">${P.bot(48)}</div><div class="abs" id="t" style="left:0;right:0;top:80vw;text-align:center;color:#fff;font-size:17vw;font-weight:900;letter-spacing:-.04em">ChatGPT</div><div class="abs" id="s" style="left:0;right:0;top:101vw;text-align:center;color:#d8fff3;font-size:6.5vw;font-weight:600">Просто попроси — и готово</div>`,
+  update(t,$,p,$$){ set($('#b'),{s:pop(t,0,.5),y:Math.sin(t*3)*1}); $('.armR').style.transform=`rotate(${-30+Math.sin(t*9)*22}deg)`;
+    $$('.eye').forEach(e=>e.style.transform=`scaleY(${P.blink(t+.5)})`);
+    const a=eo(seg(t,.4,1)); set($('#t'),{o:a,y:(1-a)*5}); set($('#s'),{o:eo(seg(t,.9,1.5))}); }}
+]});
+</script></body></html>

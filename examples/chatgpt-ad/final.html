@@ -1,0 +1,63 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>ChatGPT — финал</title>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script>
+<style>
+.msg{position:absolute;background:#fff;border-radius:5vw;padding:3.2vw 5.4vw;font-size:6.6vw;font-weight:700;box-shadow:0 1.2vw 0 #e2dcf2,0 3vw 7vw rgba(60,40,120,.18);color:#1d1b19}
+.spk{position:absolute}
+.in{position:absolute;left:3vw;right:3vw;bottom:3vw;height:13vw;border-radius:6.5vw;border:.4vw solid #d9dde3;display:flex;align-items:center;padding:0 4vw;font-size:4.4vw;background:#fff}
+.in .send{margin-left:auto;width:9vw;height:9vw;border-radius:50%;background:#10a37f;display:grid;place-items:center}
+.code{margin-top:2.4vw;background:#101418;color:#e7f3ef;border-radius:2.4vw;padding:2.6vw 3vw;white-space:pre;font:2.9vw/1.5 ui-monospace,Menlo,"DejaVu Sans Mono",monospace;min-height:8vw}
+.card{position:absolute;left:9vw;right:9vw;background:#fff;border-radius:5vw;box-shadow:0 1.4vw 0 #d6b85a,0 4vw 9vw rgba(120,80,0,.25);padding:6vw;color:#1d1b19}
+.big{position:absolute;left:0;right:0;text-align:center;font-weight:900;letter-spacing:-.05em;line-height:.9;white-space:nowrap}
+.sub{position:absolute;left:0;right:0;text-align:center;font-weight:700;font-size:6.4vw}
+.row{position:absolute;left:8vw;right:8vw;display:flex;align-items:center;gap:5vw;background:#1b232b;border-radius:6vw;padding:4.5vw 6vw;color:#fff;font-size:6.2vw;line-height:1.15;font-weight:800;box-shadow:0 1.4vw 0 #0b0f12}
+.row .ck{flex:none;width:12vw;height:12vw;border-radius:50%;background:#10a37f;display:grid;place-items:center}
+</style></head><body><script>
+const {seg,eo,pop,set,type,lerp,cl} = E;
+const CODE=`from aiogram import Bot, Dispatcher
+from aiogram.filters import CommandStart
+
+dp = Dispatcher()
+
+@dp.message(CommandStart())
+async def start(m):
+    await m.answer("Привет!")`;
+const msgs=[['Срочно!',14,6,-3],['Нужен текст на сайт',31,null,2],['И ещё код для бота',48,8,-2],['К утру',65,null,3]];
+const slam=[['doc','ПИШЕТ','письма, статьи, посты','#ffe14d','#111',24],['code','КОДИТ','от скрипта до приложения','#0b0f0d','#10a37f',24],['globe','ПЕРЕВОДИТ','на десятки языков','#ff8fc7','#111',14.5],['chart','СЧИТАЕТ','таблицы, формулы, данные','#4f6bff','#fff',19]];
+const why=['Понимает обычную речь','Отвечает за секунды','Всегда под рукой'];
+const bgG='linear-gradient(170deg,#0c7f63,#10a37f 55%,#58dcb6)';
+const wave=(t)=>-30+Math.sin(t*9)*22;
+E.run({hl:'#ff6a3d',progress:'bar',scenes:[
+ {dur:3.2,bg:'linear-gradient(160deg,#fde7d8,#e6e0ff 60%,#d8f0ff)',ink:'#1d1b19',cap:'Знакомо? *Дедлайн* горит',capAt:1.2,
+  html:msgs.map(m=>`<div class="msg" style="top:${m[1]}vw;${m[2]!==null?'left:'+m[2]+'vw':'right:8vw'}">${m[0]}</div>`).join('')+`<div class="abs" id="b" style="left:33vw;top:92vw">${P.bot(36,'#8a7bd6')}</div><div class="abs" id="dr" style="left:58vw;top:96vw">${P.icon('clock','#8a7bd6',9)}</div>`,
+  update(t,$,p,$$){ $$('.msg').forEach((e,i)=>{const k=pop(t,.15+i*.4,.4);set(e,{o:cl(k*2),s:k,r:msgs[i][3]})});
+    set($('#b'),{s:pop(t,1.9,.4),y:Math.sin(t*14)*.5}); set($('#dr'),{o:eo(seg(t,2.1,2.4)),r:t*40}); $$('.eye').forEach(e=>e.style.transform=`scaleY(${.5+.5*Math.abs(Math.sin(t*2))})`); }},
+ {dur:2.4,bg:bgG,ink:'#fff',hl:'#0b2e27',cap:'Тут выходит *ChatGPT*',capAt:.7,
+  html:`<div class="abs" id="b" style="left:15vw;top:46vw">${P.bot(70)}</div>`+[[10,34,8],[84,56,7],[12,112,6],[82,116,9]].map(s=>`<div class="spk" style="left:${s[0]}vw;top:${s[1]}vw">${P.icon('spark','#fff',s[2])}</div>`).join(''),
+  update(t,$,p,$$){ set($('#b'),{s:pop(t,.05,.55),y:Math.sin(t*3)*1.2}); $$('.eye').forEach(e=>e.style.transform=`scaleY(${P.blink(t+1.5)})`);
+    $$('.spk').forEach((e,i)=>set(e,{o:eo(seg(t,.4+i*.12,.9)),s:.8+.2*Math.sin(t*5+i),r:t*60})); }},
+ {dur:6.4,bg:'#e9edf2',ink:'#1d1b19',cap:'Попросил — *получил*',capAt:4.0,
+  html:P.win('ChatGPT',`<div class="abs" style="left:4.5vw;right:4.5vw;top:4vw;bottom:20vw;display:flex;flex-direction:column;gap:3.4vw"><div id="me" style="align-self:flex-end;max-width:72vw;opacity:0"></div><div id="ai" style="opacity:0"></div></div>
+   <div class="in"><span id="ty"></span><span id="cr" style="width:.5vw;height:5.6vw;background:#10a37f;margin-left:.5vw"></span><div class="send">${P.icon('send','#fff',5.4)}</div></div>`).replace('class="mwin ','style="left:6vw;top:16vw;width:88vw;height:124vw" class="mwin '),
+  update(t,$){ const q='Напиши мне бота для Telegram';
+    const w=eo(seg(t,0,.5)); set($('.mwin'),{o:w,y:(1-w)*6});
+    $('#ty').textContent=t<2.2?type(q,t,.5,2.0):''; $('#cr').style.opacity=t<2.2?1:0;
+    const m=pop(t,2.2,.35); $('#me').innerHTML=P.me(q).replace('class="b-me"','class="b-me" style="font-size:4.8vw"'); set($('#me'),{o:cl(m*2),s:.9+.1*m});
+    $('#ai').innerHTML=`<div class="b-ai" style="font-size:4.5vw"><b>Готово!</b> Вот бот с командой /start:</div><div class="code">${type(CODE,t,3.0,4.6)}</div><div class="b-ai" style="font-size:4.5vw;margin-top:3vw">${type('Осталось вставить токен и запустить.',t,4.7,5.4)}</div>`;
+    $('#ai').style.opacity=eo(seg(t,2.7,3.0)); }},
+ ...slam.map(w=>({dur:.9,bg:w[3],ink:w[4],trans:'none',
+  html:`<div class="abs" id="i" style="left:50%;top:34vw;margin-left:-17vw">${P.icon(w[0],w[4],34)}</div><div class="big" id="w" style="top:82vw;font-size:${w[5]}vw;color:${w[4]}">${w[1]}</div><div class="sub" id="s" style="top:112vw;color:${w[4]}">${w[2]}</div>`,
+  update(t,$){ const k=pop(t,0,.25); set($('#w'),{o:cl(k*3),s:1.35-.35*k}); set($('#i'),{s:pop(t,.05,.3),r:(1-pop(t,.05,.3))*-20}); set($('#s'),{o:eo(seg(t,.2,.4))}); }})),
+ {dur:3.4,bg:'#0f1419',ink:'#fff',hl:'#10a37f',cap:'Просто, быстро, *удобно*',capAt:1.8,
+  html:`<div class="abs" id="h" style="left:0;right:0;top:20vw;text-align:center;color:#fff;font-size:9vw;font-weight:900;letter-spacing:-.03em">Почему <span style="color:#10a37f">ChatGPT</span></div>`+why.map((x,i)=>`<div class="row" style="top:${47+i*29}vw"><div class="ck">${P.icon('check','#fff',8)}</div>${x}</div>`).join(''),
+  update(t,$,p,$$){ set($('#h'),{o:eo(seg(t,0,.4))}); $$('.row').forEach((e,i)=>{const k=pop(t,.35+i*.35,.45);set(e,{o:cl(k*2),x:(1-k)*14})}); }},
+ {dur:3.2,bg:'#ffd166',ink:'#1d1b19',hl:'#1d1b19',cap:'Задача на час — *за секунды*',capAt:1.2,
+  html:`<div class="card" style="top:46vw" id="c"><div style="font-size:4.4vw;color:#8a6a00;font-weight:700;margin-bottom:2vw">ЗАДАЧА</div><div style="font-size:6.6vw;font-weight:800;line-height:1.2">Написать письмо клиенту</div>
+   <div style="display:flex;align-items:center;gap:3vw;margin-top:6vw"><div id="tm" style="font-size:17vw;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums">0.0 с</div><div id="ok" style="width:15vw;height:15vw;border-radius:50%;background:#10a37f;display:grid;place-items:center;margin-left:auto">${P.icon('check','#fff',9.5)}</div></div></div>`,
+  update(t,$){ const c=pop(t,.05,.5); set($('#c'),{o:cl(c*2),s:c}); const v=eo(seg(t,.5,1.9))*3;$('#tm').textContent=v.toFixed(1)+' с'; set($('#ok'),{s:pop(t,1.9,.4)}); }},
+ {dur:3.8,bg:bgG,ink:'#fff',hl:'#0b2e27',cap:'Попробуй *прямо сейчас*',capAt:1.8,
+  html:`<div class="abs" id="b" style="left:23vw;top:20vw">${P.bot(54)}</div><div class="big" id="t" style="top:88vw;font-size:19vw;color:#fff">ChatGPT</div><div class="sub" id="s" style="top:112vw;color:#d8fff3;font-weight:600">Просто попроси — и готово</div>`,
+  update(t,$,p,$$){ set($('#b'),{s:pop(t,0,.5),y:Math.sin(t*3)*1}); $('.armR').style.transform=`rotate(${wave(t)}deg)`;
+    $$('.eye').forEach(e=>e.style.transform=`scaleY(${P.blink(t+.5)})`);
+    const k=pop(t,.3,.4); set($('#t'),{o:cl(k*3),s:1.3-.3*k}); set($('#s'),{o:eo(seg(t,1,1.6))}); }}
+]});
+</script></body></html>

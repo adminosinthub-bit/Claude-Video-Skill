@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Шаблон сцен</title>
+<script src="../../references/engine.js"></script>
+<style>
+  /* Размеры — в vw (1vw = 1% ширины кадра), тогда ролик одинаково выглядит в любом разрешении. */
+  .title{position:absolute;left:0;right:0;top:40vw;text-align:center;font-size:12vw;font-weight:900;letter-spacing:-.03em}
+  .dot{position:absolute;left:50%;top:95vw;width:20vw;height:20vw;margin:-10vw 0 0 -10vw;border-radius:50%;background:#ff6a3d}
+</style></head><body>
+<script>
+const {seg, eo, pop, set} = E;
+E.run({
+  hl: '#ff6a3d', progress: 'bar',
+  scenes: [
+    { dur: 3, bg: '#f7f1ea', ink: '#1d1b19',
+      html: '<div class="title">Привет!</div><div class="dot"></div>',
+      cap: 'Это *шаблон* сцены',
+      update(lt, $) { set($('.title'), {o: eo(seg(lt,0,.5)), y: (1-eo(seg(lt,0,.5)))*4}); set($('.dot'), {s: pop(lt,.4)}); } },
+    { dur: 3, bg: '#14141a', ink: '#fff', trans: 'up',
+      html: '<div class="title" style="color:#fff">Вторая сцена</div>',
+      cap: 'Дальше — *твоя история*' }
+  ]
+});
+</script></body></html>
