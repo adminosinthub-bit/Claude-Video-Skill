@@ -16,7 +16,8 @@
  *     cap: 'Текст с *подсветкой*',     // субтитры (слова появляются по очереди)
  *     capAt: 0.25,            // когда начать субтитры, с
  *     capPos: 'bottom'|'top'|'center', // положение субтитров
- *     trans: 'fade'|'up'|'left'|'zoom'|'none', // как сцена входит
+ *     trans: 'fade'|'up'|'left'|'zoom'|'circle'|'wipe'|'none', // как сцена входит
+ *     cam: [1, 1.08],         // плавный наезд камеры на сцену (масштаб начало→конец)
  *     update(lt, $, p) {}     // lt — секунды от начала сцены, $ — querySelector внутри сцены, p = lt/dur
  *   }]
  * })
@@ -29,6 +30,11 @@
   const eio = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
   const eb = (x) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
   const lerp = (a, b, x) => a + (b - a) * x;
+  // spring: плавная «пружина» с лёгким перелётом (x от 0 до 1 → 0…1.0x…1)
+  const spring = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.exp(-7 * x) * Math.cos(10 * x));
+  const smooth = (x) => x * x * (3 - 2 * x);
+  // count: число, плавно бегущее от a до b за отрезок [t0,t1]
+  const count = (a, b, t, t0, t1) => Math.round(lerp(a, b, eo(seg(t, t0, t1))));
   const type = (s, t, a, b) => s.slice(0, Math.floor(seg(t, a, b) * s.length));
   // pop: масштаб с «пружинкой» от 0 до 1 за d секунд, начиная с a
   const pop = (t, a, d = 0.45) => (t < a ? 0 : eb(seg(t, a, a + d)));
@@ -80,7 +86,8 @@
       el.className = 'scene';
       el.style.background = s.bg || '#fff';
       el.style.zIndex = i + 1;
-      el.innerHTML = s.html || '';
+      el.innerHTML = `<div class="camw" style="position:absolute;inset:0">${s.html || ''}</div>`;
+      s.camEl = el.firstChild;
       if (s.cap) {
         const cap = document.createElement('div');
         cap.className = 'cap ' + (s.capPos || 'bottom');
@@ -93,8 +100,8 @@
       }
       stage.appendChild(el);
       s.el = el;
-      s.$ = (q) => el.querySelector(q);
-      s.$$ = (q) => [...el.querySelectorAll(q)];
+      s.$ = (q) => s.camEl.querySelector(q);
+      s.$$ = (q) => [...s.camEl.querySelectorAll(q)];
     });
     const total = acc;
     window.__total = total;
@@ -119,6 +126,10 @@
           w.style.transform = `translateY(${(1 - cl(v)) * 1.2}vw) scale(${w.classList.contains('h') ? 0.6 + 0.4 * v : 1})`;
         });
       }
+      if (s.cam) { // медленный наезд/отъезд камеры: cam: [масштаб в начале, масштаб в конце]
+        const k = lerp(s.cam[0], s.cam[1], smooth(cl(lt / s.dur)));
+        s.camEl.style.transform = `scale(${k})`;
+      }
       if (s.update) s.update(lt, s.$, cl(lt / s.dur), s.$$);
     }
 
@@ -138,10 +149,13 @@
           else if (mode === 'up') tx = `translateY(${(1 - k) * 100}%)`;
           else if (mode === 'left') tx = `translateX(${(1 - k) * 100}%)`;
           else if (mode === 'zoom') { op = k; tx = `scale(${0.9 + 0.1 * k})`; }
+          else if (mode === 'circle') { s.el.style.clipPath = k >= 1 ? 'none' : `circle(${k * 75}% at 50% 55%)`; }
+          else if (mode === 'wipe') { s.el.style.clipPath = k >= 1 ? 'none' : `inset(${(1 - k) * 100}% 0 0 0)`; }
           else if (mode === 'none') { op = 1; }
         } else if (i === idx - 1 && t - scenes[idx].start < trD && (scenes[idx].trans || 'fade') !== 'none') {
           show = true; // предыдущая сцена остаётся под входящей на время перехода
         }
+        if (i !== idx) s.el.style.clipPath = 'none';
         s.el.style.display = show ? 'block' : 'none';
         if (show) {
           s.el.style.opacity = op;
@@ -155,5 +169,5 @@
     window.__setTime(0);
   }
 
-  window.E = { run, cl, seg, eo, ei, eio, eb, lerp, type, pop, set };
+  window.E = { run, cl, seg, eo, ei, eio, eb, lerp, type, pop, set, spring, smooth, count };
 })();

@@ -1,0 +1,40 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Duo A — серия</title>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script>
+<style>
+.glow{position:absolute;left:50%;top:50%;border-radius:50%;background:radial-gradient(circle,rgba(255,150,0,.55),rgba(255,150,0,0) 65%)}
+.ember{position:absolute;width:1.4vw;height:1.4vw;border-radius:50%;background:#ffb74d}
+.cell{position:absolute;width:9vw;height:9vw;border-radius:2.2vw;background:#262b4a}
+.note{position:absolute;left:5vw;right:5vw;top:9vw;background:#fff;border-radius:5vw;box-shadow:0 1.4vw 0 rgba(0,0,0,.12),0 4vw 9vw rgba(120,50,0,.35);padding:4vw 5vw;display:flex;gap:4vw;align-items:center;z-index:30}
+.modal{position:absolute;left:11vw;right:11vw;top:36vw;height:86vw;background:#fff;border-radius:7vw;box-shadow:0 1.8vw 0 rgba(0,0,0,.12),0 6vw 14vw rgba(120,50,0,.35)}
+</style></head><body><script>
+const {seg,eo,pop,set,spring,lerp,cl,smooth,count}=E;
+const embers=Array.from({length:16},(_,i)=>[(i*37)%90+5,(i*53)%70,6+(i%5)*1.5]);
+E.run({hl:'#ff9600',progress:'bar',scenes:[
+ {dur:3.8,bg:'radial-gradient(circle at 50% 40%,#3b2a6b,#14172e 70%)',ink:'#fff',cam:[1,1.07],cap:'Каждый день. Без *пропусков*',capAt:2.4,
+  html:`<div class="glow" id="gl" style="width:90vw;height:90vw;margin:-70vw 0 0 -45vw"></div><div class="abs" id="fl" style="left:33vw;top:26vw">${P.flame(34)}</div>
+  <div class="abs" id="nm" style="left:0;right:0;top:76vw;text-align:center;font-size:42vw;line-height:1;font-weight:900;color:#fff;letter-spacing:-.04em;font-variant-numeric:tabular-nums">1</div>
+  <div class="abs" id="lb" style="left:0;right:0;top:124vw;text-align:center;font-size:8.4vw;font-weight:800;color:#ffb74d">дней подряд</div>`+embers.map((e,i)=>`<i class="ember" style="left:${e[0]}vw;top:0"></i>`).join(''),
+  update(t,$,p,$$){ const k=eo(seg(t,.3,2.9)); $('#nm').textContent=count(1,346,t,.3,2.9);
+    const sc=spring(t/.6)*(.7+.5*k); set($('#fl'),{s:sc,r:Math.sin(t*6)*3,y:Math.sin(t*5)*.8}); const pu=1+.05*Math.sin(t*7);
+    set($('#gl'),{s:(.6+.7*k)*pu,o:.4+.6*k}); set($('#nm'),{s:1+.04*Math.sin(t*5)*seg(t,2.9,3.2)+ (t>2.9?.0:0)});
+    $('#lb').style.opacity=eo(seg(t,.9,1.4)); $$('.ember').forEach((e,i)=>{const d=embers[i];const y=140-((t*(10+d[2])+d[1]*1.7)%110);e.style.transform=`translate(0,${y}vw)`;e.style.opacity=.3+.5*Math.sin(t*3+i)**2;}); }},
+ {dur:3.8,bg:'#14172e',ink:'#fff',trans:'wipe',cap:'До года осталось *19 дней*',capAt:2.4,
+  html:`<div class="abs" id="ti" style="left:0;right:0;top:15vw;text-align:center;font-size:13vw;font-weight:900;color:#fff;letter-spacing:-.03em">ПОЧТИ <span style="color:#ff9600">ГОД</span></div>`+
+  Array.from({length:56},(_,k)=>`<div class="cell" id="ce${k}" style="left:${13.7+(k%7)*10.6}vw;top:${40+Math.floor(k/7)*10.6}vw"></div>`).join('')+
+  `<div class="abs" id="pr" style="left:13.7vw;right:13.7vw;top:128vw"><div style="display:flex;justify-content:space-between;font-size:4.4vw;font-weight:800;color:#ffb74d;margin-bottom:2vw"><span id="pn">346</span><span style="color:#8a8fb5">365</span></div><div style="height:3.6vw;border-radius:2vw;background:#262b4a;overflow:hidden"><div id="pb" style="height:100%;width:0;background:linear-gradient(90deg,#ff9600,#ffd23f);border-radius:2vw"></div></div></div>`,
+  update(t,$,p,$$){ set($('#ti'),{o:eo(seg(t,0,.4)),y:(1-spring(t/.5))*-4});
+    for(let k=0;k<56;k++){const a=.35+k*.036;const f=spring((t-a)/.35);const e=$('#ce'+k);
+      e.style.background=f>.02?`rgb(${Math.round(lerp(38,255,cl(f)))},${Math.round(lerp(43,150,cl(f)))},${Math.round(lerp(74,0,cl(f)))})`:'#262b4a';e.style.transform=`scale(${f>0?.6+.4*cl(f)+Math.max(0,f-1)*.4:1})`;}
+    const last=$('#ce55'); last.style.boxShadow=t>2.4?`0 0 ${4+2*Math.sin(t*8)}vw #ffb74d`:'none';
+    set($('#pr'),{o:eo(seg(t,2,2.5))}); $('#pb').style.width=(94.8*eo(seg(t,2.2,3.2)))+'%'; }},
+ {dur:4.0,bg:'linear-gradient(160deg,#ffb300,#ff7a00)',ink:'#fff',hl:'#14172e',trans:'circle',cap:'Хвалит за *каждый день*',capAt:1.8,
+  html:`<div class="note" id="nt"><div style="flex:none;width:12vw;height:12vw;border-radius:3vw;background:#f1ebff;display:grid;place-items:center;overflow:hidden">${P.owl(11)}</div><div><div style="display:flex;justify-content:space-between;font-size:3.4vw;color:#8a8a99;font-weight:700"><span>Дуо</span><span>сейчас</span></div><div style="font-size:4.4vw;font-weight:800;color:#1d1b19;line-height:1.25">346 дней подряд! Почти год — так держать!</div></div></div>
+  <div class="modal" id="md"><div class="abs" id="ow" style="left:26vw;top:4vw"><div class="abs" style="left:14vw;top:-8vw;width:0;height:0;border-left:5vw solid transparent;border-right:5vw solid transparent;border-bottom:13vw solid #ff4b8b;transform:rotate(8deg)"></div>${P.owl(34)}</div>
+   <div class="abs" style="left:0;right:0;top:38vw;text-align:center;font-size:30vw;line-height:1;font-weight:900;color:#ff9600;letter-spacing:-.04em">346</div>
+   <div class="abs" style="left:0;right:0;top:66vw;text-align:center;font-size:7vw;font-weight:900;color:#1d1b19">дней подряд</div>
+   <div class="abs" style="left:0;right:0;top:76vw;text-align:center;font-size:4.4vw;font-weight:700;color:#8a8a99">Ты почти год с нами!</div></div><div id="cfw" class="abs" style="inset:0;z-index:80">${P.confetti(80,5)}</div>`,
+  update(t,$){ const n=spring((t-.15)/.55); set($('#nt'),{o:cl(n*2),y:(1-n)*-22}); const m=spring((t-.9)/.55); set($('#md'),{o:cl(m*3),s:.7+.3*m,y:(1-m)*14});
+    set($('#ow'),{y:-Math.abs(Math.sin(t*5))*1.5});P.owlLook($('#ow'),0,1,P.blink(t));$('#ow .wingL').style.transform=`rotate(${20+Math.sin(t*12)*16}deg)`;$('#ow .wingR').style.transform=`rotate(${-20-Math.sin(t*12)*16}deg)`;
+    P.cfUpdate($('#cfw'),t-1.0,50,70); }}
+]});
+</script></body></html>

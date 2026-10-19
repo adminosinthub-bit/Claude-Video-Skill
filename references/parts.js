@@ -5,6 +5,11 @@
  *   P.icon(name, color, size)     mail globe chart bulb code doc spark send check mic image search clock
  *   P.win(title, inner, cls)      окно macOS с кнопками; внутри — inner
  *   P.me(text) / P.ai(text)       пузыри чата (класс .b-me / .b-ai)
+ *   P.owl(size,c,c2) + P.owlLook(root,dx,dy,blinkK)   сова-маскот (.wingL/.wingR — крылья для анимации)
+ *   P.flame(size)                 огонёк серии
+ *   P.phone(w, inner, style)      макет телефона (внутри .scr); w в vw
+ *   P.tapHTML() + P.touch(root,t,[[t,x,y],..],[времена нажатий])   касание пальцем с рябью
+ *   P.confetti(n,seed) + P.cfUpdate(root,t,x0,y0)   детерминированное конфетти
  */
 (function () {
   const paths = {
@@ -44,6 +49,83 @@
   const me = (t) => `<div class="b-me">${t}</div>`;
   const ai = (t) => `<div class="b-ai">${t}</div>`;
 
+
+  // ---------- сова-маскот (оригинальный рисунок) ----------
+  const owl = (size = 30, c = '#8b5cf6', c2 = '#c9b8ff') => `
+  <svg class="owl" width="${size}vw" height="${size}vw" viewBox="0 0 100 100" style="overflow:visible">
+    <g class="wingL" style="transform-origin:22px 58px"><ellipse cx="13" cy="64" rx="9" ry="17" fill="${c}" transform="rotate(12 13 64)"/></g>
+    <g class="wingR" style="transform-origin:78px 58px"><ellipse cx="87" cy="64" rx="9" ry="17" fill="${c}" transform="rotate(-12 87 64)"/></g>
+    <path d="M17 36 L23 6 L43 24 Z" fill="${c}"/><path d="M83 36 L77 6 L57 24 Z" fill="${c}"/>
+    <ellipse cx="50" cy="56" rx="36" ry="38" fill="${c}"/>
+    <ellipse cx="50" cy="73" rx="23" ry="20" fill="${c2}"/>
+    <g class="eyes" style="transform-box:fill-box;transform-origin:center">
+      <circle cx="35" cy="44" r="14" fill="#fff"/><circle cx="65" cy="44" r="14" fill="#fff"/>
+      <circle class="pupil" cx="37" cy="46" r="6" fill="#1b2a1b"/><circle class="pupil" cx="63" cy="46" r="6" fill="#1b2a1b"/>
+    </g>
+    <path d="M43 54 Q50 51 57 54 L50 67 Z" fill="#ffb020"/>
+    <ellipse cx="40" cy="97" rx="9" ry="4" fill="#ffb020"/><ellipse cx="60" cy="97" rx="9" ry="4" fill="#ffb020"/>
+  </svg>`;
+  // owlLook: куда смотрит сова (dx,dy в единицах viewBox, ±3), blink — масштаб глаз
+  const owlLook = (root, dx = 0, dy = 0, blinkK = 1) => {
+    root.querySelectorAll('.pupil').forEach((p) => (p.style.transform = `translate(${dx}px,${dy}px)`));
+    root.querySelectorAll('.eyes').forEach((e) => (e.style.transform = `scaleY(${blinkK})`));
+  };
+
+  // ---------- огонёк серии ----------
+  const flame = (size = 10, c1 = '#ff9600', c2 = '#ffd23f') => `
+  <svg class="flame" width="${size}vw" height="${size * 1.25}vw" viewBox="0 0 24 30" style="overflow:visible">
+    <path d="M12 1c1.2 6 8.5 9 8.5 17.5a8.5 8.5 0 0 1-17 0C3.5 14 6 11.5 7 9c.4 2.6 1.6 4 3 4.2C9.6 8.5 10.6 4.4 12 1z" fill="${c1}"/>
+    <path d="M12 14c.6 3 4 4.6 4 8.2a4 4 0 0 1-8 0c0-1.8 1-2.8 2-3.8.2 1.2.8 1.8 1.4 2 -.2-2.4.2-4.2.6-6.4z" fill="${c2}"/>
+  </svg>`;
+
+  // ---------- телефон ----------
+  const phone = (w, inner, style = '') => `
+  <div class="phone" style="width:${w}vw;height:${w * 2.05}vw;border-radius:${w * 0.17}vw;border:${w * 0.03}vw solid #17171c;${style}">
+    <div style="position:absolute;z-index:5;left:50%;top:${w * 0.03}vw;width:${w * 0.27}vw;height:${w * 0.055}vw;margin-left:${-w * 0.135}vw;border-radius:${w}vw;background:#17171c"></div>
+    <div class="scr">${inner}</div></div>`;
+
+  // ---------- касание пальцем ----------
+  const tapHTML = () => '<div class="tr"></div><div class="tp"></div>';
+  // touch(root, t, kf, taps): kf=[[t,x,y],...] траектория касания (vw внутри root), taps=[времена нажатий]
+  const touch = (root, t, kf, taps = []) => {
+    const tp = root.querySelector('.tp'), tr = root.querySelector('.tr');
+    const at = (tt) => {
+      if (tt <= kf[0][0]) return [kf[0][1], kf[0][2]];
+      for (let i = 1; i < kf.length; i++) if (tt <= kf[i][0]) {
+        const k = smoothK((tt - kf[i - 1][0]) / (kf[i][0] - kf[i - 1][0]));
+        return [kf[i - 1][1] + (kf[i][1] - kf[i - 1][1]) * k, kf[i - 1][2] + (kf[i][2] - kf[i - 1][2]) * k];
+      }
+      const l = kf[kf.length - 1]; return [l[1], l[2]];
+    };
+    const smoothK = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+    const [x, y] = at(t);
+    const last = taps.filter((a) => a <= t).pop();
+    const dt = last === undefined ? 9 : t - last;
+    const press = dt < 0.14 ? 0.8 : 1;
+    const vis = t >= kf[0][0] - 0.2 && t <= kf[kf.length - 1][0] + 0.6 ? 1 : 0;
+    tp.style.opacity = vis;
+    tp.style.transform = `translate(${x}vw,${y}vw) scale(${press})`;
+    if (last !== undefined && dt < 0.55) {
+      const [rx, ry] = at(last); const k = dt / 0.55;
+      tr.style.opacity = (1 - k) * 0.9; tr.style.transform = `translate(${rx}vw,${ry}vw) scale(${0.4 + 1.8 * k})`;
+    } else tr.style.opacity = 0;
+  };
+
+  // ---------- конфетти (детерминированное) ----------
+  const confetti = (n = 60, seed = 7, colors = ['#ff9600', '#58cc02', '#1cb0f6', '#ffd23f', '#ff4b4b', '#ce82ff']) => {
+    let s = seed; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    return Array.from({ length: n }, (_, i) =>
+      `<i class="cf" data-vx="${((r() - 0.5) * 80).toFixed(1)}" data-vy="${(-(30 + r() * 60)).toFixed(1)}" data-rot="${((r() - 0.5) * 1000).toFixed(0)}" style="width:${(1.2 + r() * 1.6).toFixed(1)}vw;height:${(2 + r() * 2.2).toFixed(1)}vw;background:${colors[i % colors.length]}"></i>`).join('');
+  };
+  const cfUpdate = (root, t, x0 = 50, y0 = 70, g = 85) => {
+    root.querySelectorAll('.cf').forEach((e) => {
+      if (t < 0) { e.style.opacity = 0; return; }
+      const vx = +e.dataset.vx, vy = +e.dataset.vy, rot = +e.dataset.rot;
+      e.style.opacity = Math.max(0, Math.min(1, 1 - (t - 1.6) / 1.2));
+      e.style.transform = `translate(${x0 + vx * t}vw,${y0 + vy * t + 0.5 * g * t * t}vw) rotate(${rot * t}deg)`;
+    });
+  };
+
   const style = document.createElement('style');
   style.textContent = `
   .mwin{position:absolute;background:var(--win,#fff);color:var(--winInk,#1d1b19);border-radius:3.2vw;overflow:hidden;box-shadow:0 4vw 10vw rgba(20,20,40,.28),0 0 0 .2vw rgba(0,0,0,.08);display:flex;flex-direction:column}
@@ -53,8 +135,14 @@
   .mbody{flex:1;position:relative;overflow:hidden}
   .b-me{background:var(--accent,#10a37f);color:#fff;font-size:4vw;line-height:1.3;padding:2.4vw 3.6vw;border-radius:4vw 4vw 1vw 4vw}
   .b-ai{font-size:3.8vw;line-height:1.4}
+  .phone{position:absolute;background:#fff;overflow:hidden;box-shadow:0 4vw 10vw rgba(0,0,0,.3)}
+  .scr{position:absolute;inset:0;overflow:hidden}
+  .tp,.tr{position:absolute;left:0;top:0;width:9vw;height:9vw;margin:-4.5vw 0 0 -4.5vw;border-radius:50%;z-index:60;pointer-events:none}
+  .tp{background:rgba(40,40,60,.35);border:.5vw solid rgba(255,255,255,.95);box-shadow:0 1vw 3vw rgba(0,0,0,.3);opacity:0}
+  .tr{border:.6vw solid rgba(255,255,255,.9);opacity:0}
+  .cf{position:absolute;left:0;top:0;display:block;border-radius:.3vw;opacity:0;z-index:70}
   .mono{font:3.3vw/1.5 ui-monospace,Menlo,"DejaVu Sans Mono",monospace}
   `;
   document.head.appendChild(style);
-  window.P = { bot, blink, icon, win, me, ai, paths };
+  window.P = { bot, blink, icon, win, me, ai, paths, owl, owlLook, flame, phone, tapHTML, touch, confetti, cfUpdate };
 })();

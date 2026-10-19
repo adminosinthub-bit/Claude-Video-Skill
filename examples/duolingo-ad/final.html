@@ -1,0 +1,173 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Duolingo — финал</title>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script>
+<style>
+.kick{position:absolute;left:0;right:0;top:9vw;text-align:center;font-size:3.8vw;font-weight:800;letter-spacing:.22em;text-transform:uppercase;opacity:.55}
+/* урок */
+.chip{position:absolute;left:0;top:0;height:9vw;border:.5vw solid #e5e5e5;border-bottom-width:1vw;border-radius:3vw;font-size:4.2vw;font-weight:700;display:grid;place-items:center;background:#fff;color:#1d1b19}
+.ghost{position:absolute;height:9vw;border-radius:3vw;background:#ececec}
+.line{position:absolute;left:5vw;width:50vw;height:.5vw;background:#e5e5e5}
+.btn{position:absolute;left:5vw;width:50vw;height:10vw;border-radius:3vw;display:grid;place-items:center;font-size:4.2vw;font-weight:800;color:#fff;letter-spacing:.04em}
+.sheet{position:absolute;left:0;right:0;height:27vw;background:#d7ffb8;padding:4vw 5vw}
+/* чат-хук */
+.bub{position:absolute;max-width:62vw;padding:3.2vw 4.6vw;border-radius:5vw;font-size:5vw;font-weight:700;line-height:1.25;box-shadow:0 1vw 0 rgba(60,40,120,.15)}
+.mb{background:#8b5cf6;color:#fff;border-bottom-right-radius:1.2vw}.ob{background:#fff;color:#2a2150;border-bottom-left-radius:1.2vw}
+.dt{display:inline-block;width:2.2vw;height:2.2vw;border-radius:50%;background:#fff;margin:0 .6vw}
+/* перевод */
+.wd{position:absolute;height:13vw;border-radius:4vw;display:grid;place-items:center;font-size:6.4vw;font-weight:800;color:#fff;box-shadow:0 1.2vw 0 rgba(0,0,0,.15)}
+/* лига */
+.lrow{position:absolute;left:9vw;right:9vw;height:13vw;border-radius:4vw;display:flex;align-items:center;gap:4vw;padding:0 4vw;font-size:5vw;font-weight:800;color:#1d1b19}
+.av{width:9vw;height:9vw;border-radius:50%;flex:none}
+/* серия */
+.glow{position:absolute;left:50%;top:50%;border-radius:50%;background:radial-gradient(circle,rgba(255,150,0,.55),rgba(255,150,0,0) 65%)}
+.ember{position:absolute;width:1.4vw;height:1.4vw;border-radius:50%;background:#ffb74d}
+.cell{position:absolute;width:9vw;height:9vw;border-radius:2.2vw;background:#262b4a}
+.note{position:absolute;left:5vw;right:5vw;background:#fff;border-radius:5vw;box-shadow:0 1.4vw 0 rgba(0,0,0,.12),0 4vw 9vw rgba(40,20,90,.35);padding:4vw 5vw;display:flex;gap:4vw;align-items:center;z-index:30}
+.modal{position:absolute;left:11vw;right:11vw;top:36vw;height:86vw;background:#fff;border-radius:7vw;box-shadow:0 1.8vw 0 rgba(0,0,0,.12),0 6vw 14vw rgba(120,50,0,.35)}
+</style></head><body><script>
+const {seg,eo,pop,set,spring,lerp,cl,smooth,type,count}=E;
+const GREEN='linear-gradient(170deg,#4fb800,#58cc02 55%,#9be34a)';
+
+/* ===== урок: данные ===== */
+const PL=20,PT=18,PW=60;
+const chips=[['water',18,[6,76],[36,38]],['I',9,[28,76],[5,38]],['cat',13,[40,76],null],['drink',18,[6,87],[16,38]],['milk',14,[28,87],null]];
+const taps=[['I',1.0],['drink',1.8],['water',2.6]];
+const cen=(w)=>{const c=chips.find(x=>x[0]===w);return [PL+c[2][0]+c[1]/2,PT+c[2][1]+4.5]};
+const kf=[[.4,78,135],...taps.map(([w,t])=>[t,...cen(w)]),[3.3,PL+30,PT+111],[4.6,72,140]];
+const tp=[...taps.map(x=>x[1]),3.3];
+const lesson=`
+ <div class="abs" style="left:6vw;top:9vw;width:38vw;height:3.4vw;border-radius:2vw;background:#e5e5e5"><div id="pf" style="height:100%;border-radius:2vw;background:#58cc02;width:30%"></div></div>
+ <div class="abs" style="right:5vw;top:7.6vw;font-size:4.6vw;font-weight:800;color:#ff4b4b">♥ 5</div>
+ <div class="abs" style="left:5vw;top:17vw;font-size:3.7vw;font-weight:800;color:#1d1b19;white-space:nowrap">Переведи на английский</div>
+ <div class="abs" style="left:2vw;top:25vw">${P.owl(14)}</div>
+ <div class="abs" style="left:18vw;top:26vw;border:.5vw solid #e5e5e5;border-radius:3vw;padding:2vw 3.4vw;font-size:4.8vw;font-weight:600;color:#1d1b19">Я пью воду</div>
+ <div class="line" style="top:47vw"></div><div class="line" style="top:58vw"></div>
+ ${chips.map(c=>`<div class="ghost" style="left:${c[2][0]}vw;top:${c[2][1]}vw;width:${c[1]}vw"></div>`).join('')}
+ ${chips.map((c,i)=>`<div class="chip" id="c${i}" style="width:${c[1]}vw">${c[0]}</div>`).join('')}
+ <div class="btn" id="btn" style="top:106vw"></div>
+ <div class="sheet" id="sh" style="top:96vw"><div style="display:flex;align-items:center;gap:3vw"><div style="width:9vw;height:9vw;border-radius:50%;background:#58cc02;display:grid;place-items:center">${P.icon('check','#fff',6)}</div><div style="font-size:5.6vw;font-weight:900;color:#3b8f00">Правильно!</div><div style="margin-left:auto;background:#ffd23f;border-radius:3vw;padding:1.2vw 2.6vw;font-size:3.6vw;font-weight:900;color:#7a5600">+10 XP</div></div><div style="font-size:3.2vw;color:#3b8f00;margin-top:3vw;font-weight:700">drink — пить</div></div>`;
+
+/* ===== перевод ===== */
+const pairs=[['Я','I',22,'#58cc02'],['пью','drink',50,'#1cb0f6'],['воду','water',78,'#ff9600']];
+/* ===== лига ===== */
+const lg=[['Алина',420,'#ff9600'],['Макс',395,'#1cb0f6'],['Ты',360,'#58cc02'],['Катя',340,'#ce82ff'],['Игорь',310,'#ff4b4b']];
+const embers=Array.from({length:16},(_,i)=>[(i*37)%90+5,(i*53)%70,6+(i%5)*1.5]);
+const hat=`<div class="abs" style="left:14vw;top:-8vw;width:0;height:0;border-left:5vw solid transparent;border-right:5vw solid transparent;border-bottom:13vw solid #ff4b8b;transform:rotate(8deg)"></div>`;
+const wave=(t)=>-30+Math.sin(t*9)*22;
+
+E.run({hl:'#8b5cf6',progress:'bar',scenes:[
+/* 1. ХУК */
+ {dur:4.6,bg:'linear-gradient(170deg,#efe5ff,#dff1ff)',ink:'#2a2150',cam:[1,1.04],cap:'Сова *не сдаётся* — и не даёт сдаться тебе',capAt:3.0,
+  html:`<div class="kick" style="color:#2a2150">Знакомая история</div>
+   <div class="bub mb" id="b1" style="right:6vw;top:22vw">Я начну завтра. Честно.</div>
+   <div class="abs" id="a1" style="left:4vw;top:46vw">${P.owl(17)}</div><div class="bub ob" id="b2" style="left:23vw;top:48vw">Ты говорил это 3 дня назад.</div>
+   <div class="bub mb" id="b3" style="right:6vw;top:74vw"><span id="dts"><i class="dt"></i><i class="dt"></i><i class="dt"></i></span><span id="tx" style="display:none">Ну ладно, 5 минут.</span></div>
+   <div class="abs" id="a2" style="left:4vw;top:97vw">${P.owl(17)}</div><div class="bub ob" id="b4" style="left:23vw;top:99vw">Договорились.</div>`,
+  update(t,$,p,$$){ const f=(id,a,dx=0)=>{const k=spring((t-a)/.45);set($(id),{o:cl(k*3),s:.85+.15*k,x:(1-k)*dx})};
+    f('#b1',.3,8);f('#a1',1.1,-6);f('#b2',1.2,-8);f('#b3',2.0,8);f('#a2',3.0,-6);f('#b4',3.1,-8);
+    $('#dts').style.display=t<2.6?'inline':'none';$('#tx').style.display=t<2.6?'none':'inline';
+    $$('.dt').forEach((d,i)=>d.style.transform=`translateY(${-Math.abs(Math.sin(t*8+i*.8))*1.6}vw)`);
+    ['#a1','#a2'].forEach(id=>P.owlLook($(id),Math.sin(t*3)*2,0,P.blink(t))); }},
+/* 2. УРОК */
+ {dur:5.0,bg:'linear-gradient(170deg,#fff6e0,#e6f6ff)',ink:'#1d1b19',hl:'#58cc02',trans:'circle',cam:[1,1.05],cap:'Учит *на практике*: собери фразу сам',capAt:.8,
+  html:`<div class="kick" style="color:#1d1b19">Урок</div>`+P.phone(PW,lesson,`left:${PL}vw;top:${PT}vw`)+`<div class="abs" id="tc" style="left:0;top:0;width:100vw;height:170vw">${P.tapHTML()}</div>`,
+  update(t,$){ const ph=spring(t/.7); set($('.phone'),{o:cl(ph*2),y:(1-ph)*30});
+    chips.forEach((c,i)=>{const e=$('#c'+i);const tt=(taps.find(x=>x[0]===c[0])||[0,99])[1];let x=c[2][0],y=c[2][1];
+      if(c[3]){const k=spring((t-tt)/.55);x=lerp(c[2][0],c[3][0],k);y=lerp(c[2][1],c[3][1],k);}
+      e.style.transform=`translate(${x}vw,${y}vw)`;e.style.borderColor=(c[3]&&t>tt)?'#58cc02':'#e5e5e5';});
+    const ready=t>3.0;$('#btn').textContent='ПРОВЕРИТЬ';$('#btn').style.background=ready?'#58cc02':'#e5e5e5';$('#btn').style.color=ready?'#fff':'#afafaf';
+    $('#btn').style.boxShadow=ready?`0 ${t>3.3&&t<3.45?.2:1}vw 0 #46a302`:'0 1vw 0 #cfcfcf';
+    set($('#sh'),{y:(1-spring((t-3.5)/.45))*27}); $('#pf').style.width=(30+15*eo(seg(t,3.6,4.2)))+'%'; P.touch($('#tc'),t,kf,tp); }},
+/* 3. РАЗБОР ОШИБКИ */
+ {dur:4.0,bg:'#eaf7ff',ink:'#12324a',hl:'#1cb0f6',trans:'circle',cap:'Разбирает *ошибки* понятно, а не занудно',capAt:.5,
+  html:`<div class="kick" style="color:#12324a">Разбор ошибки</div>
+  <div class="abs" style="left:8vw;right:8vw;top:24vw;height:62vw;background:#fff;border-radius:6vw;box-shadow:0 1.6vw 0 #cfe6f5,0 5vw 10vw rgba(20,80,120,.18)"></div>
+  <div class="abs" id="tg" style="left:13vw;top:29vw;background:#1cb0f6;color:#fff;font-size:3.8vw;font-weight:800;padding:1.2vw 3vw;border-radius:3vw">Present Simple</div>
+  <div class="abs" id="sn" style="left:0;right:0;top:44vw;text-align:center;font-size:10.5vw;font-weight:800;color:#12324a;white-space:nowrap">She <span style="position:relative;display:inline-block"><span id="bad" style="text-decoration:underline wavy #ff4b4b;text-decoration-thickness:.5vw;display:inline-block">drink<b style="visibility:hidden;padding:0 1.2vw;margin-left:.5vw">s</b></span><span id="good" style="position:absolute;left:0;top:0;opacity:0">drink<b id="sx" style="display:inline-block;background:#58cc02;color:#fff;border-radius:2vw;padding:0 1.2vw;margin-left:.5vw">s</b></span></span> water</div>
+  <div class="abs" id="nt" style="left:13vw;right:13vw;top:68vw;background:#fff3c4;border-radius:4vw;padding:3.4vw 4vw;font-size:5.6vw;font-weight:800;color:#6b4a00;text-align:center">he / she / it + <span style="color:#3b8f00">-s</span></div>
+  <div class="abs" id="ow" style="left:6vw;top:94vw">${P.owl(38)}</div>
+  <div class="abs" id="sp" style="left:42vw;top:100vw;width:50vw;background:#fff;border-radius:4vw 4vw 4vw 1vw;padding:3vw 4vw;font-size:4.6vw;font-weight:700;color:#12324a;box-shadow:0 1vw 0 #cfe6f5">Запомни: она пьёт — she drink<b style="color:#3b8f00">s</b></div>`,
+  update(t,$){ set($('#tg'),{o:eo(seg(t,.1,.5))}); const sn=spring((t-.3)/.6); set($('#sn'),{o:cl(sn*2),y:(1-sn)*6});
+    $('#bad').style.transform=`translateX(${t>1.3&&t<1.9?Math.sin(t*60)*(1.3-(t-1.3))*.9:0}vw)`;
+    $('#bad').style.color=t>1.3?'#ff4b4b':'#12324a'; $('#bad').style.opacity=t<2.1?1:0; $('#good').style.opacity=t>=2.1?1:0;
+    set($('#sx'),{s:t>=2.1?spring((t-2.1)/.4):1}); const nt=spring((t-2.4)/.5); set($('#nt'),{o:cl(nt*2),y:(1-nt)*8});
+    set($('#ow'),{s:spring((t-.1)/.6),y:Math.sin(t*3)*.6}); P.owlLook($('#ow'),3,-2,P.blink(t));
+    $('#ow .wingR').style.transform=`rotate(${t>2.4?-30+Math.sin(t*10)*20:0}deg)`;
+    const sp=spring((t-2.7)/.45); set($('#sp'),{o:cl(sp*2),s:.9+.1*sp}); }},
+/* 4. ПЕРЕВОД СЛОВО В СЛОВО */
+ {dur:4.0,bg:'#fff9e6',ink:'#2a2150',hl:'#8b5cf6',trans:'wipe',cap:'Объясняет *простыми* словами',capAt:.4,
+  html:`<div class="kick" style="color:#2a2150">Перевод</div><div class="abs" id="hd" style="left:0;right:0;top:17vw;text-align:center;font-size:7vw;font-weight:900;color:#2a2150">Как сказать «Я пью воду»?</div>
+  <svg class="abs" style="left:0;top:0" width="100vw" height="140vw" viewBox="0 0 100 140">${pairs.map((p,i)=>`<path id="ln${i}" d="M${p[2]} 62 L ${p[2]} 88" stroke="${p[3]}" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>`).join('')}</svg>`+
+  pairs.map((p,i)=>`<div class="wd" id="ru${i}" style="left:${p[2]-12}vw;top:42vw;width:24vw;background:#8b5cf6">${p[0]}</div><div class="wd" id="en${i}" style="left:${p[2]-14}vw;top:90vw;width:28vw;background:${p[3]}">${p[1]}</div>`).join('')+
+  `<div class="abs" id="ow" style="left:60vw;top:108vw">${P.owl(30)}</div><div class="abs" id="bb" style="left:6vw;top:114vw;width:50vw;background:#fff;border-radius:4vw 4vw 1.2vw 4vw;padding:3vw 4vw;font-size:4.6vw;font-weight:700;box-shadow:0 1vw 0 rgba(60,40,120,.15)">Слово в слово — и всё понятно</div>
+  <div class="abs" id="ok" style="left:44vw;top:66vw;width:12vw;height:12vw;border-radius:50%;background:#58cc02;display:grid;place-items:center">${P.icon('check','#fff',8)}</div>`,
+  update(t,$){ set($('#hd'),{o:eo(seg(t,0,.4)),y:(1-spring(t/.5))*-4});
+    pairs.forEach((p,i)=>{const a=.6+i*.7;set($('#ru'+i),{o:cl(spring((t-a+.4)/.4)*2),s:.8+.2*spring((t-a+.4)/.4)});
+      $('#ln'+i).style.strokeDashoffset=40*(1-eo(seg(t,a,a+.5)));const k=spring((t-a-.35)/.45);set($('#en'+i),{o:cl(k*3),s:.7+.3*k,y:(1-k)*5})});
+    set($('#ok'),{s:spring((t-2.8)/.4)}); set($('#ow'),{s:spring((t-.2)/.6),y:Math.sin(t*3)*.6});P.owlLook($('#ow'),-3,-1,P.blink(t));
+    $('#ow .wingL').style.transform=`rotate(${t>2.6?20+Math.sin(t*10)*16:0}deg)`; const b=spring((t-2.6)/.45);set($('#bb'),{o:cl(b*2),s:.9+.1*b}); }},
+/* 5. ЛИГА */
+ {dur:2.8,bg:'#fff3e0',ink:'#4a3000',hl:'#ff9600',trans:'left',cam:[1,1.04],cap:'Превращает учёбу в *игру*',capAt:.3,
+  html:`<div class="kick" style="color:#4a3000">Лига</div><div class="abs" style="left:6vw;right:6vw;top:25vw;height:90vw;background:#fff;border-radius:6vw;box-shadow:0 1.6vw 0 #ecd9b8,0 5vw 10vw rgba(120,80,0,.18)"></div>`+
+  lg.map((r,i)=>`<div class="lrow" id="lr${i}" style="top:${30+i*16}vw"><span class="rk" style="width:6vw;color:#999">${i+1}</span><i class="av" style="background:${r[2]}"></i><span style="flex:1">${r[0]}</span><span class="xp" style="font-size:4.2vw;color:#777">${r[1]} XP</span></div>`).join('')+
+  `<div class="abs" id="bd" style="right:9vw;top:18vw;background:#58cc02;color:#fff;font-size:4.6vw;font-weight:900;padding:1.4vw 3.4vw;border-radius:4vw;box-shadow:0 1vw 0 #46a302">+90 XP</div>`,
+  update(t,$,p,$$){ const k=spring((t-1.5)/.6); const pos=[lerp(0,1,k),lerp(1,2,k),lerp(2,0,k),3,4];
+    lg.forEach((r,i)=>{const e=$('#lr'+i);const y=30+pos[i]*16; const pp=spring((t-.1-i*.08)/.5); e.style.transform=`translateY(${y-(30+i*16)}vw) scale(${.92+.08*pp})`; e.style.opacity=cl(pp*2);
+      e.style.background=(i===2)?(k>.5?'#d7ffb8':'#eefbe0'):'transparent'; $$('.rk')[i].textContent=Math.round(pos[i])+1;});
+    const xp=count(360,450,t,.6,1.6); $$('.xp')[2].textContent=xp+' XP'; $$('.xp')[2].style.color='#3b8f00';
+    set($('#bd'),{s:spring((t-.6)/.4),o:cl(spring((t-.6)/.4)*2),y:-Math.abs(Math.sin(Math.max(0,t-1.0)*5))*(t<1.8?1:0)}); }},
+/* 6. ЦЕЛЬ ДНЯ */
+ {dur:2.8,bg:'#eaf7ff',ink:'#12324a',hl:'#1cb0f6',trans:'left',cam:[1,1.04],cap:'Уроки по *5 минут* в день',capAt:.3,
+  html:`<div class="kick" style="color:#12324a">Цель на день</div>
+  <svg class="abs" style="left:20vw;top:32vw" width="60vw" height="60vw" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="#d6e8f4" stroke-width="10" fill="none"/><circle id="rg" cx="50" cy="50" r="40" stroke="#1cb0f6" stroke-width="10" fill="none" stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="251.3" stroke-dashoffset="251.3"/></svg>
+  <div class="abs" id="mn" style="left:20vw;width:60vw;top:52vw;text-align:center;font-size:18vw;font-weight:900;color:#12324a;line-height:1">0</div><div class="abs" style="left:20vw;width:60vw;top:72vw;text-align:center;font-size:5vw;font-weight:800;color:#6a8aa1">из 5 минут</div>
+  <div class="abs" id="ck" style="left:41vw;top:98vw;width:18vw;height:18vw;border-radius:50%;background:#58cc02;display:grid;place-items:center;box-shadow:0 1.2vw 0 #46a302">${P.icon('check','#fff',11)}</div>
+  <div class="abs" id="st" style="left:12vw;right:12vw;top:122vw;background:#fff;border-radius:5vw;box-shadow:0 1.2vw 0 #cfe6f5;padding:3vw 5vw;display:flex;align-items:center;gap:3vw;font-size:5vw;font-weight:800;color:#12324a">${P.flame(8)}<span>Серия +1 день</span></div>`,
+  update(t,$){ const p=eo(seg(t,.3,1.9)); $('#rg').style.strokeDashoffset=251.3*(1-p); $('#rg').style.stroke=t>1.9?'#58cc02':'#1cb0f6';
+    $('#mn').textContent=Math.round(p*5); set($('#ck'),{s:spring((t-1.9)/.45)}); set($('#st'),{o:cl(spring((t-2.1)/.45)*2),y:(1-spring((t-2.1)/.45))*6}); }},
+/* 7. НАПОМИНАНИЕ */
+ {dur:2.8,bg:'linear-gradient(170deg,#241a4d,#0f0c24)',ink:'#fff',hl:'#8b5cf6',trans:'left',cam:[1,1.04],cap:'Мягко *напомнит*, если забыл',capAt:.3,
+  html:`<div class="kick" style="color:#fff">Напоминания</div><div class="abs" style="left:0;right:0;top:20vw;text-align:center;font-size:24vw;font-weight:300;color:#fff;letter-spacing:-.02em">21:40</div>
+  <div class="abs" id="fl" style="left:44vw;top:52vw">${P.flame(12)}</div><div class="abs" id="sr" style="left:0;right:0;top:78vw;text-align:center;font-size:4.6vw;font-weight:700;color:#ff9b9b">Серия под угрозой</div>
+  <div class="note" id="nt" style="top:92vw;background:rgba(255,255,255,.96)"><div style="flex:none;width:12vw;height:12vw;border-radius:3vw;background:#f1ebff;display:grid;place-items:center;overflow:hidden">${P.owl(11)}</div><div><div style="display:flex;justify-content:space-between;font-size:3.4vw;color:#8a8a99;font-weight:700"><span>Дуо</span><span>сейчас</span></div><div style="font-size:4.4vw;font-weight:800;color:#1d1b19;line-height:1.25">Эй, ты ещё не занимался сегодня. Твоя серия скучает!</div></div></div>
+  <div class="abs" id="tc" style="left:0;top:0;width:100vw;height:170vw">${P.tapHTML()}</div>`,
+  update(t,$){ const n=spring((t-.35)/.55); set($('#nt'),{o:cl(n*2),y:(1-n)*20}); const hit=t>1.7; 
+    const dim=hit?1:.35+.1*Math.sin(t*6); set($('#fl'),{s:hit?1+.25*Math.exp(-(t-1.7)*5)*Math.cos((t-1.7)*14)+.2:.85,o:dim});
+    $('#sr').textContent=hit?'Серия сохранена!':'Серия под угрозой'; $('#sr').style.color=hit?'#9be34a':'#ff9b9b';
+    P.touch($('#tc'),t,[[1.0,70,106],[1.7,70,106],[2.1,70,106]],[1.7]); }},
+/* 8. СЧЁТЧИК СЕРИИ */
+ {dur:3.6,bg:'radial-gradient(circle at 50% 40%,#3b2a6b,#14172e 70%)',ink:'#fff',hl:'#ff9600',trans:'circle',cam:[1,1.07],cap:'Каждый день. Без *пропусков*',capAt:2.2,
+  html:`<div class="kick" style="color:#fff">Серия</div><div class="glow" id="gl" style="width:90vw;height:90vw;margin:-70vw 0 0 -45vw"></div><div class="abs" id="fl" style="left:33vw;top:26vw">${P.flame(34)}</div>
+  <div class="abs" id="nm" style="left:0;right:0;top:78vw;text-align:center;font-size:38vw;line-height:1;font-weight:900;color:#fff;letter-spacing:-.04em;font-variant-numeric:tabular-nums">1</div>
+  <div class="abs" id="lb" style="left:0;right:0;top:122vw;text-align:center;font-size:8.4vw;font-weight:800;color:#ffb74d">дней подряд</div>`+embers.map((e,i)=>`<i class="ember" style="left:${e[0]}vw;top:0"></i>`).join(''),
+  update(t,$,p,$$){ const k=eo(seg(t,.3,2.7)); $('#nm').textContent=count(1,346,t,.3,2.7);
+    const sc=spring(t/.6)*(.7+.5*k); set($('#fl'),{s:sc,r:Math.sin(t*6)*3,y:Math.sin(t*5)*.8}); const pu=1+.05*Math.sin(t*7);
+    set($('#gl'),{s:(.6+.7*k)*pu,o:.4+.6*k}); $('#lb').style.opacity=eo(seg(t,.9,1.4));
+    $$('.ember').forEach((e,i)=>{const d=embers[i];const y=140-((t*(10+d[2])+d[1]*1.7)%110);e.style.transform=`translate(0,${y}vw)`;e.style.opacity=.3+.5*Math.sin(t*3+i)**2;}); }},
+/* 9. КАЛЕНДАРЬ */
+ {dur:3.4,bg:'#14172e',ink:'#fff',hl:'#ff9600',trans:'wipe',cap:'До года осталось *19 дней*',capAt:2.1,
+  html:`<div class="abs" id="ti" style="left:0;right:0;top:15vw;text-align:center;font-size:13vw;font-weight:900;color:#fff;letter-spacing:-.03em">ПОЧТИ <span style="color:#ff9600">ГОД</span></div>`+
+  Array.from({length:56},(_,k)=>`<div class="cell" id="ce${k}" style="left:${13.7+(k%7)*10.6}vw;top:${40+Math.floor(k/7)*10.6}vw"></div>`).join('')+
+  `<div class="abs" id="pr" style="left:13.7vw;right:13.7vw;top:128vw"><div style="display:flex;justify-content:space-between;font-size:4.4vw;font-weight:800;color:#ffb74d;margin-bottom:2vw"><span>346</span><span style="color:#8a8fb5">365</span></div><div style="height:3.6vw;border-radius:2vw;background:#262b4a;overflow:hidden"><div id="pb" style="height:100%;width:0;background:linear-gradient(90deg,#ff9600,#ffd23f);border-radius:2vw"></div></div></div>`,
+  update(t,$){ set($('#ti'),{o:eo(seg(t,0,.4)),y:(1-spring(t/.5))*-4});
+    for(let k=0;k<56;k++){const a=.3+k*.03;const f=spring((t-a)/.35);const e=$('#ce'+k);
+      e.style.background=f>.02?`rgb(${Math.round(lerp(38,255,cl(f)))},${Math.round(lerp(43,150,cl(f)))},${Math.round(lerp(74,0,cl(f)))})`:'#262b4a';e.style.transform=`scale(${f>0?.6+.4*cl(f)+Math.max(0,f-1)*.4:1})`;}
+    $('#ce55').style.boxShadow=t>2.1?`0 0 ${4+2*Math.sin(t*8)}vw #ffb74d`:'none';
+    set($('#pr'),{o:eo(seg(t,1.8,2.3))}); $('#pb').style.width=(94.8*eo(seg(t,2.0,2.9)))+'%'; }},
+/* 10. ПОЗДРАВЛЕНИЕ */
+ {dur:4.2,bg:'linear-gradient(160deg,#ffb300,#ff7a00)',ink:'#fff',hl:'#14172e',trans:'circle',cap:'Поздравляет за *каждый день*',capAt:1.8,
+  html:`<div class="note" id="nt" style="top:9vw"><div style="flex:none;width:12vw;height:12vw;border-radius:3vw;background:#f1ebff;display:grid;place-items:center;overflow:hidden">${P.owl(11)}</div><div><div style="display:flex;justify-content:space-between;font-size:3.4vw;color:#8a8a99;font-weight:700"><span>Дуо</span><span>сейчас</span></div><div style="font-size:4.4vw;font-weight:800;color:#1d1b19;line-height:1.25">346 дней подряд! Почти год — так держать!</div></div></div>
+  <div class="modal" id="md"><div class="abs" id="ow" style="left:26vw;top:4vw">${hat}${P.owl(34)}</div>
+   <div class="abs" style="left:0;right:0;top:38vw;text-align:center;font-size:30vw;line-height:1;font-weight:900;color:#ff9600;letter-spacing:-.04em">346</div>
+   <div class="abs" style="left:0;right:0;top:66vw;text-align:center;font-size:7vw;font-weight:900;color:#1d1b19">дней подряд</div>
+   <div class="abs" style="left:0;right:0;top:76vw;text-align:center;font-size:4.4vw;font-weight:700;color:#8a8a99">Ты почти год с нами!</div></div><div id="cfw" class="abs" style="inset:0;z-index:80">${P.confetti(80,5)}</div>`,
+  update(t,$){ const n=spring((t-.15)/.55); set($('#nt'),{o:cl(n*2),y:(1-n)*-22}); const m=spring((t-.9)/.55); set($('#md'),{o:cl(m*3),s:.7+.3*m,y:(1-m)*14});
+    set($('#ow'),{y:-Math.abs(Math.sin(t*5))*1.5});P.owlLook($('#ow'),0,1,P.blink(t));$('#ow .wingL').style.transform=`rotate(${20+Math.sin(t*12)*16}deg)`;$('#ow .wingR').style.transform=`rotate(${-20-Math.sin(t*12)*16}deg)`;
+    P.cfUpdate($('#cfw'),t-1.0,50,70); }},
+/* 11. ПРИЗЫВ */
+ {dur:3.8,bg:GREEN,ink:'#fff',hl:'#2d6b00',trans:'circle',cap:'Начни *сегодня* — через год удивишься',capAt:1.6,
+  html:`<div class="abs" id="ow" style="left:24vw;top:22vw">${P.owl(52)}</div><div class="abs" id="t" style="left:0;right:0;top:88vw;text-align:center;font-size:17vw;font-weight:900;letter-spacing:-.04em;color:#fff">Duolingo</div>
+  <div class="abs" id="s" style="left:6vw;right:6vw;top:110vw;text-align:center;font-size:5.4vw;font-weight:700;color:#eaffd0;line-height:1.25">Учи язык по чуть-чуть.<br>Каждый день.</div><div id="cfw" class="abs" style="inset:0;z-index:80">${P.confetti(50,33)}</div>`,
+  update(t,$,p,$$){ set($('#ow'),{s:spring(t/.6),y:Math.sin(t*3)*1}); P.owlLook($('#ow'),0,0,P.blink(t+.4)); $('#ow .wingR').style.transform=`rotate(${wave(t)}deg)`;
+    const k=spring((t-.3)/.5); set($('#t'),{o:cl(k*3),s:1.3-.3*k}); set($('#s'),{o:eo(seg(t,.9,1.5))}); P.cfUpdate($('#cfw'),t-.2,50,50); }}
+]});
+</script></body></html>

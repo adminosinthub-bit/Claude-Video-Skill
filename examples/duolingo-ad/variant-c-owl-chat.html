@@ -1,0 +1,42 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Duo C — сова-наставник</title>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script>
+<style>
+.bub{position:absolute;max-width:62vw;padding:3.2vw 4.6vw;border-radius:5vw;font-size:5vw;font-weight:700;line-height:1.25;box-shadow:0 1vw 0 rgba(60,40,120,.15)}
+.me{background:#8b5cf6;color:#fff;border-bottom-right-radius:1.2vw}.ow{background:#fff;color:#2a2150;border-bottom-left-radius:1.2vw}
+.dot{display:inline-block;width:2.2vw;height:2.2vw;border-radius:50%;background:#8b5cf6;margin:0 .6vw}
+.w{position:absolute;height:13vw;border-radius:4vw;display:grid;place-items:center;font-size:6.4vw;font-weight:800;color:#fff;box-shadow:0 1.2vw 0 rgba(0,0,0,.15)}
+</style></head><body><script>
+const {seg,eo,pop,set,spring,lerp,cl,type}=E;
+const pairs=[['Я','I',22,'#58cc02'],['пью','drink',50,'#1cb0f6'],['воду','water',78,'#ff9600']];
+E.run({hl:'#8b5cf6',progress:'bar',scenes:[
+ {dur:4.8,bg:'linear-gradient(170deg,#efe5ff,#dff1ff)',ink:'#2a2150',cap:'Сова *не сдаётся*',capAt:3.4,
+  html:`<div class="bub me" id="b1" style="right:6vw;top:20vw">Я начну завтра. Честно.</div>
+   <div class="abs" id="a1" style="left:4vw;top:44vw">${P.owl(17)}</div><div class="bub ow" id="b2" style="left:23vw;top:46vw">Ты говорил это 3 дня назад.</div>
+   <div class="bub me" id="b3" style="right:6vw;top:72vw"><span id="dts"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span><span id="tx" style="display:none">Ну ладно, 5 минут.</span></div>
+   <div class="abs" id="a2" style="left:4vw;top:95vw">${P.owl(17)}</div><div class="bub ow" id="b4" style="left:23vw;top:97vw">Договорились.</div>`,
+  update(t,$,p,$$){ const f=(id,a,dx=0)=>{const k=spring((t-a)/.45);set($(id),{o:cl(k*3),s:.85+.15*k,x:(1-k)*dx})};
+    f('#b1',.3,8);f('#a1',1.2,-6);f('#b2',1.3,-8);f('#b3',2.3,8);f('#a2',3.4,-6);f('#b4',3.5,-8);
+    $('#dts').style.display=t<2.9?'inline':'none';$('#tx').style.display=t<2.9?'none':'inline';
+    $$('.dot').forEach((d,i)=>d.style.transform=`translateY(${-Math.abs(Math.sin(t*8+i*.8))*1.6}vw)`);
+    ['#a1','#a2'].forEach(id=>P.owlLook($(id),Math.sin(t*3)*2,0,P.blink(t))); }},
+ {dur:4.6,bg:'#fff9e6',ink:'#2a2150',hl:'#8b5cf6',trans:'wipe',cap:'Объясняет *простыми* словами',capAt:.4,
+  html:`<div class="abs" id="hd" style="left:0;right:0;top:16vw;text-align:center;font-size:7vw;font-weight:900;color:#2a2150">Как сказать «Я пью воду»?</div>
+  <svg class="abs" style="left:0;top:0" width="100vw" height="140vw" viewBox="0 0 100 140">${pairs.map((p,i)=>`<path id="ln${i}" d="M${p[2]} 62 C ${p[2]} 74, ${p[2]} 78, ${p[2]} 88" stroke="${p[3]}" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-dasharray="40" stroke-dashoffset="40"/>`).join('')}</svg>`+
+  pairs.map((p,i)=>`<div class="w" id="ru${i}" style="left:${p[2]-12}vw;top:42vw;width:24vw;background:#8b5cf6">${p[0]}</div><div class="w" id="en${i}" style="left:${p[2]-14}vw;top:90vw;width:28vw;background:${p[3]}">${p[1]}</div>`).join('')+
+  `<div class="abs" id="ow" style="left:60vw;top:108vw">${P.owl(30)}</div><div class="abs" id="bb" style="left:6vw;top:114vw;width:50vw;background:#fff;border-radius:4vw 4vw 1.2vw 4vw;padding:3vw 4vw;font-size:4.6vw;font-weight:700;box-shadow:0 1vw 0 rgba(60,40,120,.15)">Слово в слово — и всё понятно</div>
+  <div class="abs" id="ok" style="left:44vw;top:66vw;width:12vw;height:12vw;border-radius:50%;background:#58cc02;display:grid;place-items:center">${P.icon('check','#fff',8)}</div>`,
+  update(t,$){ set($('#hd'),{o:eo(seg(t,0,.4)),y:(1-spring(t/.5))*-4});
+    pairs.forEach((p,i)=>{const a=.7+i*.8;set($('#ru'+i),{o:cl(spring((t-a+.4)/.4)*2),s:.8+.2*spring((t-a+.4)/.4)});
+      $('#ln'+i).style.strokeDashoffset=40*(1-eo(seg(t,a,a+.5)));const k=spring((t-a-.35)/.45);set($('#en'+i),{o:cl(k*3),s:.7+.3*k,y:(1-k)*5})});
+    set($('#ok'),{s:spring((t-3.3)/.4)}); set($('#ow'),{s:spring((t-.2)/.6),y:Math.sin(t*3)*.6});P.owlLook($('#ow'),-3,-1,P.blink(t));
+    $('#ow .wingL').style.transform=`rotate(${t>3?20+Math.sin(t*10)*16:0}deg)`; const b=spring((t-3.0)/.45);set($('#bb'),{o:cl(b*2),s:.9+.1*b}); }},
+ {dur:3.8,bg:'#ffd23f',ink:'#2a2150',hl:'#2a2150',hlInk:'#ffd23f',trans:'circle',cap:'*Хвалит* за каждый день',capAt:1.8,
+  html:`<div class="abs" id="bq" style="left:12vw;right:12vw;top:14vw;background:#fff;border-radius:6vw;padding:4vw 5vw;font-size:6.6vw;font-weight:900;color:#2a2150;text-align:center;box-shadow:0 1.4vw 0 rgba(0,0,0,.15)">Почти год! Горжусь тобой.</div>
+  <div class="abs" id="fl" style="left:50%;top:44vw;margin-left:-30vw">${P.flame(60)}</div>
+  <div class="abs" id="nm" style="left:0;right:0;top:56vw;text-align:center;font-size:50vw;line-height:1;font-weight:900;color:#fff;letter-spacing:-.05em;-webkit-text-stroke:1.2vw #2a2150;paint-order:stroke fill;text-shadow:0 2vw 0 #2a2150">346</div>
+  <div class="abs" id="ow" style="left:30vw;top:104vw">${P.owl(40)}</div><div id="cfw" class="abs" style="inset:0;z-index:80">${P.confetti(80,21)}</div>`,
+  update(t,$){ set($('#bq'),{o:cl(spring((t-.2)/.5)*2),s:.85+.15*spring((t-.2)/.5)}); set($('#fl'),{s:spring((t-.1)/.6)*1.05,r:Math.sin(t*6)*3});
+    set($('#nm'),{s:spring((t-.35)/.55),o:1}); set($('#ow'),{s:spring((t-.5)/.6),y:-Math.abs(Math.sin(t*5))*2});P.owlLook($('#ow'),0,0,P.blink(t));
+    $('#ow .wingL').style.transform=`rotate(${20+Math.sin(t*12)*18}deg)`;$('#ow .wingR').style.transform=`rotate(${-20-Math.sin(t*12)*18}deg)`;P.cfUpdate($('#cfw'),t-.4,50,60); }}
+]});
+</script></body></html>
