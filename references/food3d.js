@@ -9,7 +9,6 @@
  */
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { E3D } from './engine3d.js';
 
 const V3 = THREE.Vector3;
@@ -196,54 +195,195 @@ export function mangoCut(o = {}) {
 }
 
 /* ------------------------------ «ёжик» ------------------------------ */
-// срез щёчки с надрезами сеткой, вывернутый наружу: setK(0) — плоско, setK(1) — кубики веером на выпуклой кожуре
-export function hedgehog(o = {}) {
-  const a = o.a ?? 0.62, b = o.b ?? 0.88, depth = o.depth ?? 0.42, s = o.size ?? 0.16;
-  const g = new THREE.Group();
-  const cells = [];
-  for (let i = -8; i <= 8; i++) for (let j = -8; j <= 8; j++) {
-    const u = i * s * 1.02, v = j * s * 1.02;
-    if ((u / (a - s * 0.4)) ** 2 + (v / (b - s * 0.4)) ** 2 < 1) cells.push([u, v]);
+// Как в жизни: щёчку надрезают сеткой до кожуры (не насквозь) и выворачивают. Столбики мякоти приросли к кожуре —
+// у основания соседи касаются (щель — только линия ножа), к верхушкам щели раскрываются клиньями.
+// Высота столбика — настоящая толщина щёчки (в центре толще, к краю сходит на нет), краевые обрезаны контуром плода.
+// setK(0) — ровный надрезанный срез (кожура — чаша), setK(1) — кожура вывернута куполом. Пересчёт на CPU, узор мякоти — по aRest.
+
+// толщина щёчки за плоскостью разреза z = c: карта высот поверхности манго, h(x, y) в координатах манго
+function cheekHeight(c) {
+  const N = 160, X0 = -0.9, X1 = 0.9, Y0 = -1.08, Y1 = 1.08, H = new Float32Array(N * N).fill(-1);
+  for (let i = 0; i <= 900; i++) for (let j = 0; j <= 450; j++) {
+    const lon = -Math.PI / 2 + (Math.PI * i) / 900, lat = -Math.PI / 2 + (Math.PI * j) / 450;
+    const [x, y, z] = mangoPt(Math.sin(lon) * Math.cos(lat), Math.sin(lat), Math.cos(lon) * Math.cos(lat));
+    const a = Math.round(((x - X0) / (X1 - X0)) * (N - 1)), b = Math.round(((y - Y0) / (Y1 - Y0)) * (N - 1));
+    if (a >= 0 && a < N && b >= 0 && b < N && z - c > H[b * N + a]) H[b * N + a] = z - c;
   }
-  const fm = fleshMat({ center: [0, 0], radius: [0.9, 0.9], seed: true, bump: 0.003, wet: 0.01, deep: o.deep || '#ff9400', light: o.light || '#ffbf1a', extra: { specularIntensity: 0.4, clearcoat: 0.8 } });
-  const geo = new RoundedBoxGeometry(s * 0.97, s * 0.97, s * 1.15, 4, s * 0.16);
-  const seeds = new Float32Array(cells.length * 3);
-  seed = 41; for (let i = 0; i < seeds.length; i++) seeds[i] = rnd() * 10;
-  geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 3));
-  const im = new THREE.InstancedMesh(geo, fm, cells.length);
-  im.castShadow = im.receiveShadow = true;
-  g.add(im);
-  // кожура-основание (поверхность купола), пересчитывается при setK
-  const SEG = 48, RING = 18;
-  const sg = new THREE.BufferGeometry(), sp = new Float32Array((RING + 1) * SEG * 3), si = [];
-  for (let r = 0; r < RING; r++) for (let k = 0; k < SEG; k++) { const A = r * SEG + k, B = r * SEG + ((k + 1) % SEG), C = (r + 1) * SEG + k, D = (r + 1) * SEG + ((k + 1) % SEG); si.push(A, C, B, B, C, D); }
-  sg.setAttribute('position', new THREE.BufferAttribute(sp, 3)); sg.setIndex(si);
-  const skin = sh(new THREE.Mesh(sg, o.skin || skinMat({ blush: 0.6 })));
-  skin.material.side = THREE.DoubleSide;
-  g.add(skin);
-  const dm = new THREE.Object3D(), up = new V3(0, 0, 1), n = new V3();
-  const dome = (u, v, k) => depth * k * (1 - (u / a) ** 2 - (v / b) ** 2);
-  g.userData.setK = (k) => {
-    const spread = 1 + 0.12 * Math.max(0, k);
-    cells.forEach(([u0, v0], i) => {
-      const u = u0 * spread, v = v0 * spread;
-      const z = dome(u0, v0, k);
-      n.set((2 * depth * k * u0) / (a * a), (2 * depth * k * v0) / (b * b), 1).normalize();
-      dm.position.set(u, v, z).addScaledVector(n, s * 0.55);
-      dm.quaternion.setFromUnitVectors(up, n);
-      dm.scale.setScalar(1);
-      dm.updateMatrix(); im.setMatrixAt(i, dm.matrix);
-    });
-    im.instanceMatrix.needsUpdate = true;
-    for (let r = 0; r <= RING; r++) for (let kk = 0; kk < SEG; kk++) {
-      const f = r / RING, ang = (kk / SEG) * Math.PI * 2, u0 = Math.cos(ang) * a * f, v0 = Math.sin(ang) * b * f;
-      const zz = dome(u0, v0, k) - 0.02 - 0.06 * f * f;
-      const i3 = (r * SEG + kk) * 3; sp[i3] = u0 * spread; sp[i3 + 1] = v0 * spread; sp[i3 + 2] = zz;
+  for (let pass = 0; pass < 2; pass++) { // лёгкое сглаживание (сглаживает дискретизацию сетки)
+    const S = H.slice();
+    for (let b = 1; b < N - 1; b++) for (let a = 1; a < N - 1; a++) {
+      let s = 0; for (let db = -1; db <= 1; db++) for (let da = -1; da <= 1; da++) s += Math.max(0, S[(b + db) * N + a + da]);
+      if (S[b * N + a] > 0) H[b * N + a] = s / 9;
     }
-    sg.attributes.position.needsUpdate = true; sg.computeVertexNormals(); sg.computeBoundingSphere();
+  }
+  return (x, y) => {
+    const fx = Math.min(N - 1.001, Math.max(0, ((x - X0) / (X1 - X0)) * (N - 1))), fy = Math.min(N - 1.001, Math.max(0, ((y - Y0) / (Y1 - Y0)) * (N - 1)));
+    const a = Math.floor(fx), b = Math.floor(fy), u = fx - a, v = fy - b, q = (i, j) => Math.max(0, H[j * N + i]);
+    return (q(a, b) * (1 - u) + q(a + 1, b) * u) * (1 - v) + (q(a, b + 1) * (1 - u) + q(a + 1, b + 1) * u) * v;
   };
+}
+
+export function hedgehog(o = {}) {
+  const cz = o.cut ?? 0.17, sec = section(mangoGeometry(), cz), hm = cheekHeight(cz), { cx, cy } = sec;
+  const step = o.step ?? 0.21, kerf = o.kerf ?? 0.003, sink = 0.035, bevel = o.bevel ?? 0.02, bulge = o.bulge ?? 0;
+  const dome = o.dome ?? 0.7, tilt = o.tilt ?? 0.6, skinT = 0.014; // высота купола (доля толщины), доля наклона «чаши», толщина кожуры
+  const h = (x, y) => hm(x + cx, y + cy); // локальные координаты: центр среза в (0, 0)
+  const Rof = (x, y) => { const k = ((Math.atan2(y, x) + Math.PI) / (2 * Math.PI)) * sec.N, k0 = Math.floor(k), f = k - k0; return sec.R[k0 % sec.N] * (1 - f) + sec.R[(k0 + 1) % sec.N] * f; };
+  // сетка ножа: чуть повёрнута и сдвинута, линии слегка «гуляют» (рука не идеальна)
+  const ga = o.gridAngle ?? 0.07, ca = Math.cos(ga), sa = Math.sin(ga), ox = step * 0.31, oy = step * 0.47;
+  const toPlane = (gx, gy) => {
+    const x = gx * ca - gy * sa + ox, y = gx * sa + gy * ca + oy;
+    return [x + 0.006 * Math.sin(y * 7.3 + 1.1) + 0.003 * Math.sin(y * 17.0), y + 0.006 * Math.sin(x * 6.1 + 2.3) + 0.003 * Math.sin(x * 15.0 + 0.7)];
+  };
+  // мякоть мягкая: бока чуть волнистые, без идеальных плоскостей (детерминированная сумма синусов)
+  const wob = (x, y, z, s) => 0.5 * Math.sin(x * 37.1 + y * 11.3 + z * 23.7 + s) + 0.3 * Math.sin(-x * 19.7 + y * 41.9 - z * 13.1 + 2 * s) + 0.2 * Math.sin(x * 61.3 - y * 29.1 + z * 47.9 + 3 * s);
+  const clip = (p, e) => { const r = Math.hypot(p[0], p[1]), lim = Rof(p[0], p[1]) * 0.985 - e; return r > lim ? [(p[0] * lim) / r, (p[1] * lim) / r] : p; };
+
+  // столбики: кольца суперэллипса (скруглённый квадрат) от основания (утоплено в кожуру) до верхушки с фаской
+  const NR = 48, SE = 2 / 9, D_FIXED = [-sink, 0, 0.012, 0.03, 0.06, 0.1], BEV = [0, 0.3, 0.6, 0.85, 1];
+  const RINGS = D_FIXED.length + BEV.length;
+  const pos = [], rest = [], meta = [], idx = [], cols = [];
+  seed = 47;
+  const span = Math.ceil(1.1 / step) + 2;
+  for (let i = -span; i <= span; i++) for (let j = -span; j <= span; j++) {
+    let inside = 0;
+    for (let a = 0; a < 5; a++) for (let b = 0; b < 5; b++) { const p = toPlane((i + (a + 0.5) / 5) * step, (j + (b + 0.5) / 5) * step); if (Math.hypot(p[0], p[1]) < Rof(p[0], p[1]) * 0.97 && h(p[0], p[1]) > 0.012) inside++; }
+    if (inside < 8) continue; // обрезки меньше трети ячейки — отбрасываем
+    const base = pos.length / 3, gc = [(i + 0.5) * step, (j + 0.5) * step], ring = [];
+    for (let r = 0; r < RINGS; r++) {
+      const isBev = r >= D_FIXED.length, bf = isBev ? BEV[r - D_FIXED.length] : 0;
+      for (let k = 0; k < NR; k++) {
+        const f = (k / NR) * Math.PI * 2, cu = Math.cos(f), su = Math.sin(f);
+        // фаска: радиус ограничен высотой столбика в этой точке; inset по четверти окружности
+        const p0 = toPlane(gc[0] + Math.sign(cu) * Math.abs(cu) ** SE * (step / 2 - kerf), gc[1] + Math.sign(su) * Math.abs(su) ** SE * (step / 2 - kerf));
+        // фаска неровная: мякоть по краю где-то смята, где-то острее
+        const hh0 = h(...clip(p0, 0)), rb = Math.min(bevel * (0.55 + 0.45 * (0.5 + 0.5 * wob(p0[0], p0[1], 0, 7.7))), 0.45 * hh0), e = isBev ? rb * (1 - Math.cos(bf * Math.PI / 2)) : 0;
+        const hs = step / 2 - kerf - e;
+        const p = clip(toPlane(gc[0] + Math.sign(cu) * Math.abs(cu) ** SE * hs, gc[1] + Math.sign(su) * Math.abs(su) ** SE * hs), e);
+        const hh = h(p[0], p[1]);
+        const d = isBev ? hh - rb + rb * Math.sin(bf * Math.PI / 2) : Math.min(D_FIXED[r], Math.max(-sink, hh - rb));
+        const wk = Math.min(1, Math.max(0, (d - 0.02) / 0.05)) * 0.006; // у основания не трогаем — там столбики касаются
+        const q = [p[0] + wk * (wob(p[0], p[1], d, 1.3) + 0.6 * Math.sin(d * 9.0 + p[1] * 5.0 + i)), p[1] + wk * (wob(p[1], p[0], d, 4.1) + 0.6 * Math.sin(d * 8.0 + p[0] * 6.0 + j))];
+        pos.push(0, 0, 0); rest.push(q[0] + cx, q[1] + cy, d - hh); meta.push(q[0], q[1], d, hh);
+        if (r === RINGS - 1) ring.push(q);
+      }
+    }
+    // крышка (бывший срез) — внутренние кольца к центру с лёгкой выпуклостью: мякоть чуть вспучивается
+    const cxr = ring.reduce((s, q) => s + q[0], 0) / NR, cyr = ring.reduce((s, q) => s + q[1], 0) / NR;
+    const CAP = [0.72, 0.44, 0.18];
+    for (const f of CAP) for (let k = 0; k < NR; k++) {
+      const x = cxr + (ring[k][0] - cxr) * f, y = cyr + (ring[k][1] - cyr) * f, hh = h(x, y), z = bulge * (1 - f * f) * Math.min(1, hh / 0.12);
+      pos.push(0, 0, 0); rest.push(x + cx, y + cy, z); meta.push(x, y, hh + z, hh);
+    }
+    const hc = h(cxr, cyr), zc = bulge * Math.min(1, hc / 0.12);
+    pos.push(0, 0, 0); rest.push(cxr + cx, cyr + cy, zc); meta.push(cxr, cyr, hc + zc, hc);
+    const NRING = RINGS + CAP.length;
+    for (let r = 0; r < NRING - 1; r++) for (let k = 0; k < NR; k++) {
+      const a = base + r * NR + k, b = base + r * NR + ((k + 1) % NR), c2 = a + NR, d2 = b + NR;
+      idx.push(a, b, d2, a, d2, c2);
+    }
+    const top = base + (NRING - 1) * NR, ctr = base + NRING * NR;
+    for (let k = 0; k < NR; k++) idx.push(ctr, top + k, top + ((k + 1) % NR));
+    cols.push({ from: base, to: ctr + 1, c: [cxr, cyr], jit: [rnd() * Math.PI * 2, 0.4 + rnd() * 0.6] });
+  }
+
+  const geo = new THREE.BufferGeometry();
+  const P = new Float32Array(pos.length), M = new Float32Array(meta);
+  geo.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  geo.setAttribute('aRest', new THREE.Float32BufferAttribute(rest, 3));
+  geo.setIndex(idx);
+  const fm = o.flesh || fleshMat({ center: [cx, cy], radius: [sec.rx, sec.ry], rest: true, bump: 0.003, wet: 0.01, deep: o.deep || '#ff9400', light: o.light || '#ffbf1a', extra: { specularIntensity: 0.4, clearcoat: 0.85 } });
+  const flesh = sh(new THREE.Mesh(geo, fm));
+  const g = new THREE.Group();
+  g.add(flesh);
+
+  // кожура: внешняя (кожица, смотрит вниз-наружу), внутренняя (светлый подкожный слой между основаниями) и кромка толщины
+  const RING = 28, SEG = 128, nS = 1 + RING * SEG, sk = [];
+  for (let r = 0; r <= RING; r++) for (let s = 0; s < (r ? SEG : 1); s++) {
+    const a = (s / SEG) * Math.PI * 2 - Math.PI, f = r / RING, R = Rof(Math.cos(a), Math.sin(a)) * 0.985 * f;
+    sk.push([Math.cos(a) * R, Math.sin(a) * R]);
+  }
+  const skIdx = [];
+  for (let r = 0; r < RING; r++) for (let s = 0; s < SEG; s++) {
+    const at = (rr, ss) => (rr === 0 ? 0 : 1 + (rr - 1) * SEG + (ss % SEG));
+    if (r === 0) skIdx.push(0, at(1, s + 1), at(1, s));
+    else skIdx.push(at(r, s), at(r + 1, s + 1), at(r + 1, s), at(r, s), at(r, s + 1), at(r + 1, s + 1));
+  }
+  const mkSkin = (mat) => {
+    const sg = new THREE.BufferGeometry();
+    sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(nS * 3), 3));
+    sg.setAttribute('aRest', new THREE.Float32BufferAttribute(sk.flatMap(([x, y]) => [x + cx, y + cy, cz + h(x, y)]), 3));
+    sg.setIndex(skIdx);
+    return sh(new THREE.Mesh(sg, mat));
+  };
+  const outer = mkSkin(o.skin || skinMat({ blush: 0.6, rest: true }));
+  outer.material.side = THREE.DoubleSide;
+  const inner = mkSkin(new THREE.MeshPhysicalMaterial({ color: col('#e8a52a'), roughness: 0.45, clearcoat: 0.6, clearcoatRoughness: 0.1, side: THREE.DoubleSide }));
+  inner.receiveShadow = true;
+  const rimGeo = new THREE.BufferGeometry(), rimIdx = [];
+  rimGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SEG * 2 * 3), 3));
+  for (let s = 0; s < SEG; s++) { const a = s * 2, b = ((s + 1) % SEG) * 2; rimIdx.push(a, b, a + 1, b, b + 1, a + 1); }
+  rimGeo.setIndex(rimIdx);
+  const rim = sh(new THREE.Mesh(rimGeo, new THREE.MeshPhysicalMaterial({ color: col('#e9d27a'), roughness: 0.5, side: THREE.DoubleSide })));
+  g.add(outer, inner, rim);
+
+  // поверхность кожуры при выворачивании k: z = m·h(x, y), m: −1 (чаша) → dome (купол)
+  const mOf = (k) => -1 + (1 + dome) * k;
+  const grad = (x, y) => { const e = 0.012; return [(h(x + e, y) - h(x - e, y)) / (2 * e), (h(x, y + e) - h(x, y - e)) / (2 * e)]; };
+  const frame = (x, y, m) => {
+    const [hx, hy] = grad(x, y), t1 = new V3(1, 0, m * hx).normalize(), n = new V3(-m * hx, -m * hy, 1).normalize(), t2 = new V3().crossVectors(n, t1);
+    return new THREE.Matrix4().makeBasis(t1, t2, n);
+  };
+  const R = new THREE.Matrix4(), J = new THREE.Matrix4(), v = new V3(), w3 = new V3(), up = new V3();
+  g.userData.setK = (k) => {
+    const m = mOf(k);
+    for (const cl of cols) {
+      const [xc, yc] = cl.c;
+      // поворот столбика = поворот участка кожуры под ним (наклон «чаши» учтён частично — tilt), плюс лёгкий разнобой
+      R.copy(frame(xc, yc, tilt * m)).multiply(J.makeRotationAxis(up.set(Math.cos(cl.jit[0]), Math.sin(cl.jit[0]), 0), 0.1 * cl.jit[1] * Math.max(0, k))).multiply(frame(xc, yc, -tilt).transpose());
+      const B0z = -h(xc, yc), Bkz = m * h(xc, yc);
+      cl.R = (cl.R || new THREE.Matrix4()).copy(R); cl.B = [xc, yc, Bkz, B0z];
+      for (let i = cl.from; i < cl.to; i++) {
+        const x = M[i * 4], y = M[i * 4 + 1], d = M[i * 4 + 2], hh = M[i * 4 + 3];
+        v.set(x - xc, y - yc, d - hh - B0z).applyMatrix4(R).add(w3.set(xc, yc, Bkz)); // жёстко с центром основания
+        const fw = Math.min(1, Math.max(0, d / 0.08)), s = fw * fw * (3 - 2 * fw);
+        if (s < 1) { w3.set(0, 0, d).applyMatrix4(R).add(up.set(x, y, m * hh)); v.lerp(w3, 1 - s); } // у кожуры — точно по куполу: соседи касаются
+        P[i * 3] = v.x; P[i * 3 + 1] = v.y; P[i * 3 + 2] = v.z;
+      }
+    }
+    geo.attributes.position.needsUpdate = true; geo.computeVertexNormals(); geo.computeBoundingSphere();
+    const op = outer.geometry.attributes.position, ip = inner.geometry.attributes.position, rp = rimGeo.attributes.position;
+    sk.forEach(([x, y], i) => {
+      const [hx, hy] = grad(x, y), n = v.set(-m * hx, -m * hy, 1).normalize(), z = m * h(x, y);
+      ip.setXYZ(i, x, y, z); op.setXYZ(i, x - n.x * skinT, y - n.y * skinT, z - n.z * skinT);
+      if (i >= nS - SEG) { const s = i - (nS - SEG); rp.setXYZ(s * 2, x, y, z); rp.setXYZ(s * 2 + 1, x - n.x * skinT, y - n.y * skinT, z - n.z * skinT); }
+    });
+    for (const mm of [outer, inner, rim]) { const gg = mm.geometry; gg.attributes.position.needsUpdate = true; gg.computeVertexNormals(); gg.computeBoundingSphere(); }
+  };
+  // капли сока выступают на верхушках, когда ёжик выворачивается (мякоть сжимается у основания)
+  let kNow = 0;
+  const setK0 = g.userData.setK;
+  g.userData.setK = (k) => { kNow = k; setK0(k); };
+  const nb = o.beads ?? 18, bl = [];
+  seed = 59;
+  const tall = cols.filter((cl) => h(...cl.c) > 0.18);
+  for (let b = 0; b < nb && tall.length; b++) {
+    const cl = tall[Math.floor(rnd() * tall.length)], ox = (rnd() - 0.5) * step * 0.55, oy = (rnd() - 0.5) * step * 0.55, r = 0.011 + rnd() * 0.016, k0 = 0.45 + rnd() * 0.4;
+    const pp = new V3(), nn = new V3();
+    bl.push(() => {
+      const gk = Math.min(1, Math.max(0, (kNow - k0) / 0.3));
+      if (gk <= 0 || !cl.R) return null;
+      const [xc, yc, Bkz, B0z] = cl.B;
+      pp.set(ox, oy, -B0z).applyMatrix4(cl.R).add(nn.set(xc, yc, Bkz)); // точка на верхушке (z = 0 в покое)
+      nn.set(0, 0, 1).transformDirection(cl.R);
+      const rr = r * (0.3 + 0.7 * gk);
+      return { p: [pp.x + nn.x * rr * 0.42, pp.y + nn.y * rr * 0.42, pp.z + nn.z * rr * 0.42], s: [rr, rr * 0.55, rr], dir: [nn.x, nn.y, nn.z] };
+    });
+  }
+  if (bl.length) g.add(drops(bl, { depth: 0.55 }));
   g.userData.setK(0);
-  g.userData.count = cells.length;
+  g.userData.count = cols.length;
+  g.userData.flesh = fm;
   return g;
 }
 
