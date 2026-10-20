@@ -300,7 +300,7 @@ export function toBundleEntry(res) {
 
 export function scanBrands(html) {
   const names = new Set();
-  for (const m of html.matchAll(/P\.logo(?:Tile)?\(\s*(['"`])([^'"`]+?)\1/g)) names.add(m[2]);
+  for (const m of html.matchAll(/(?:P\.logo(?:Tile)?|logo3D|logoTile3D)\(\s*(['"`])([^'"`<]+?)\1/g)) names.add(m[2]);
   for (const m of html.matchAll(/data-logo\s*=\s*"([^"]+)"/g)) names.add(m[1]);
   return [...names];
 }

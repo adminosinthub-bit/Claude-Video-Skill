@@ -9,13 +9,16 @@
 //        [--max]                      максимальное качество: 60 fps, motion blur 3, crf 15, x264 slow/animation
 //        [--audio music.mp3]          своя музыка (смешивается со звуками сцен)
 //        [--no-sfx]                   не собирать звук из sfx/music сцен (scripts/sfx.py, нужен numpy)
+//        [--draft3d]                  черновик 3D: быстрее, без сглаживания (для превью)
 //        [--png] [--keep-frames] [--no-logos]   (логотипы P.logo('Бренд') ищутся и подставляются автоматически)
 import { spawn, spawnSync, execSync } from 'node:child_process';
 import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir, cpus } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
-import { pathToFileURL, fileURLToPath } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { startServer, commonRoot } from './serve.mjs';
+import { setup3d, threeReady } from './setup-3d.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -44,7 +47,10 @@ const width = parseInt(opt('width', preset[0]), 10);
 const height = parseInt(opt('height', preset[1]), 10);
 const blurN = Math.max(1, parseInt(opt('motion-blur', MAX ? '3' : '1'), 10));
 const shutter = Math.min(1, Math.max(0.05, parseFloat(opt('shutter', '0.5'))));
-const workers = Math.max(1, parseInt(opt('workers', Math.min(cpus().length, 6)), 10));
+const IS3D = /engine3d|vendor\/node_modules\/three/.test(readFileSync(resolve(input), 'utf8'));
+// 3D считается программным WebGL (SwiftShader), который сам занимает все ядра: параллельные страницы только мешают
+const workers = Math.max(1, parseInt(opt('workers', IS3D ? 1 : Math.min(cpus().length, 6)), 10));
+const DRAFT3D = has('draft3d') ? { antialias: false, shadowSize: 1024 } : null; // черновик 3D: без MSAA, тени попроще
 const userAudio = opt('audio', null);
 const png = has('png');
 const keep = has('keep-frames');
@@ -53,7 +59,7 @@ const crf = opt('crf', MAX ? '15' : '17');
 // автоподстановка логотипов: если в HTML есть P.logo('Бренд') / data-logo, найти их и записать logos.js (--no-logos отключает)
 if (!has('no-logos')) {
   const src = readFileSync(resolve(input), 'utf8');
-  if (/P\.logo(?:Tile)?\(|data-logo\s*=/.test(src)) {
+  if (/P\.logo(?:Tile)?\(|logo(?:Tile)?3D\(|data-logo\s*=/.test(src)) {
     const r = spawnSync(process.execPath, [join(HERE, 'logos.mjs'), 'auto', resolve(input)], { stdio: ['ignore', 'inherit', 'inherit'] });
     if (r.status === 2) console.error('⚠ часть логотипов не найдена — вместо них будут текстовые плашки (см. выше)');
   }
@@ -67,12 +73,25 @@ try {
   ({ chromium } = createRequire(join(root, 'x.js'))('playwright'));
 }
 
-const url = pathToFileURL(resolve(input)).href;
-const browser = await chromium.launch(process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {});
+// 3D: страница с engine3d/three — поставить Three.js при первом запуске
+const html = readFileSync(resolve(input), 'utf8');
+if (/engine3d|vendor\/node_modules\/three/.test(html) && !threeReady() && !setup3d()) { console.error('нет Three.js — 3D не отрендерится'); process.exit(1); }
+// страница открывается через локальный http-сервер (ES-модули не работают по file://)
+const server = await startServer(commonRoot([dirname(resolve(input)), join(HERE, '..')]));
+const url = server.url(resolve(input));
+const browser = await chromium.launch({ ...(process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {}), args: ['--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'] });
+// дождаться движка (в т.ч. модулей 3D) и всех асинхронных загрузок (модели, шрифты)
+const ready = async (page) => {
+  await page.waitForFunction(() => typeof window.__setTime === 'function', null, { timeout: 300000 });
+  await page.evaluate(() => Promise.all(window.__pending || []));
+  await page.evaluate(() => document.fonts && document.fonts.ready);
+};
 
 // длина ролика и звуковые события — из самой страницы
 const probe = await browser.newPage({ viewport: { width, height } });
-await probe.goto(url);
+if (DRAFT3D) await probe.addInitScript((o) => { window.__E3D_OPTS = o; }, DRAFT3D);
+await probe.goto(url, { waitUntil: 'domcontentloaded', timeout: 300000 });
+await ready(probe);
 const info = await probe.evaluate(() => ({ total: window.__total || null, audio: window.__AUDIO || null }));
 await probe.close();
 const t0 = parseFloat(opt('from', '0'));
@@ -91,8 +110,9 @@ const tStart = Date.now();
 async function worker(w) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => console.error('\nОшибка страницы:', e.message));
-  await page.goto(url);
-  await page.evaluate(() => document.fonts && document.fonts.ready);
+  if (DRAFT3D) await page.addInitScript((o) => { window.__E3D_OPTS = o; }, DRAFT3D);
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 300000 });
+  await ready(page);
   for (let k = w; k < subTotal; k += workers) {
     const i = startF + Math.floor(k / blurN);
     const j = k % blurN;
@@ -112,6 +132,7 @@ async function worker(w) {
 await Promise.all(Array.from({ length: workers }, (_, w) => worker(w)));
 process.stderr.write(`\rснимок ${subTotal}/${subTotal} за ${Math.round((Date.now() - tStart) / 1000)} с                 \n`);
 await browser.close();
+await server.close();
 
 // звук из сцен (sfx/music) → wav через scripts/sfx.py
 const dur = total / fps;

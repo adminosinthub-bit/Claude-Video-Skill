@@ -19,7 +19,7 @@ node scripts/render.mjs work/<название>/v1.html --preset vertical-previe
 - `references/engine.js` — движок сцен: фон, субтитры с подсветкой (`*слово*`), прогресс, переходы, easing (`E.pop`, `E.type`, `E.set`).
 - `references/parts.js` — детали: маскот `P.bot`, иконки `P.icon`, окно macOS `P.win`, пузыри чата.
 - `references/design-notes.md` — что делает ролик «живым» (сюжет, хук, ритм, субтитры). **Прочитай перед написанием вариантов.**
-- Примеры готовых роликов: `examples/` (`claude-ad` — 16:9; `chatgpt-ad` — 9:16, 25 с; `duolingo-ad` — 9:16, 40 с, 60 fps с сюжетом и демонстрациями; `claude-self-ad` — 9:16, 39 с, 60 fps, реклама самого Claude с мета-поворотом).
+- Примеры готовых роликов: `examples/` (`3d-demo` — 9:16, 30 с, 3D-движок: продукт-шот, логотипы, маскот, телефон, материалы; `claude-ad` — 16:9; `chatgpt-ad` — 9:16, 25 с; `duolingo-ad` — 9:16, 40 с, 60 fps с сюжетом и демонстрациями; `claude-self-ad` — 9:16, 39 с, 60 fps, реклама самого Claude с мета-поворотом).
 - Размер файла: ролик 40 с / 60 fps ≈ 10 МБ; если нужен лимит меньше — `--fps 30` или перекодируй `ffmpeg -i in.mp4 -crf 24 out.mp4`.
 
 ## Главные принципы качества
@@ -47,6 +47,23 @@ node scripts/render.mjs work/<название>/v1.html --preset vertical-previe
 
 **Пресет максимального качества:** `node scripts/render.mjs final.html --preset vertical --max` = 60 fps + **motion blur** (3 подкадра на кадр, затвор 180°) + x264 `slow`/`animation`, crf 15. Подкадры: `--motion-blur 4`, затвор: `--shutter 0.5`. Стоит в N раз дороже по времени — для превью не нужен.
 - Длина ролика берётся из сцен сама (`--duration` можно не указывать).
+
+## 3D: объекты, свет, камера (`references/engine3d.js`)
+Настоящий 3D внутри сцен: студийный свет, мягкие тени, отражения, материалы, объёмный текст и логотипы. Основа — Three.js (MIT), ставится сама в `vendor/` при первом 3D-рендере (`node scripts/setup-3d.mjs`).
+Шаблон: `references/template-3d.html` (importmap + `<script type="module">`). Пример всего сразу: `examples/3d-demo/reel.html`.
+
+```js
+let v, can;
+{ dur: 5, bg: '#f3e4d0',
+  mount(el) { v = E3D.view(el, { floor: '#f3e4d0' }); can = v.add(E3D.can({ label: { title: 'ЗАРНИЦА', sub: 'COLD BREW' } })); },
+  update(t) { can.rotation.y = t * .8; v.orbit({ target: [0, .8, 0], radius: 6, angle: -20 + t * 8, height: 1 }); v.render(t); } }
+```
+- **Сцена:** `E3D.view(el, {floor:'#цвет'})` — бесшовная студия с тенями; без `floor` фон прозрачный (виден 2D-фон сцены, тень ложится на него). Камера: `v.orbit({target, radius, angle, height})`, `v.fit(объекты)` — сама подберёт дистанцию под вертикальный кадр.
+- **Материалы** `E3D.mat(kind, color)`: `clay` (пластилин), `plastic`, `glossy`, `paint`, `metal`, `chrome`, `gold`, `glass` (преломление — ставь за стеклом что-то цветное), `emissive`, `matte`.
+- **Объекты:** `box sphere capsule cylinder torus cone`, `can` (банка с этикеткой), `bottle`, `phone({screen(ctx,W,H,t)})` (живой экран), `mascot()` (персонаж: `userData.setMood/blink/petals`), `confetti(n,{at})`, `glb('model.glb')` (свои модели, анимации идут по t).
+- **Текст и логотипы:** `text3D('ЗАРНИЦА', {size, kind, color})` — выдавленные буквы, кириллица работает; `logo3D('Telegram')` / `logoTile3D('Telegram')` — логотип найдётся сам (scripts/logos.mjs) и выдавится в цвете бренда; `label('текст')` — плоская надпись в пространстве.
+- **Анимация** — только из `t`: падение `y = h*(1-f²)`, удар — сплющивание `scale(1+.08s, 1-.12s)`, пружины `E.spring`. Объект с `userData.tick(t)` обновляется сам.
+- **Скорость:** 3D считается на процессоре (программный WebGL): ~0.6–1 с на кадр 1080×1920, стекло ~2 с. Рендер для 3D идёт в 1 поток (так быстрее), превью — `--preset vertical-preview --draft3d`. Motion blur для 3D умножает время на N — обычно хватает 60 fps без него.
 
 ## Логотипы брендов (ищутся и подставляются сами)
 В HTML пишешь `P.logo('Duolingo', 12)` или `P.logoTile('Telegram', 24)` — при рендере `scripts/render.mjs` сам находит логотипы, кладёт их в `assets/logos/` и подключает `logos.js` рядом с HTML (отключить: `--no-logos`).

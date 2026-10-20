@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>3D-движок — демо</title>
+<script type="importmap">{"imports":{
+  "three":"../../vendor/node_modules/three/build/three.module.js",
+  "three/addons/":"../../vendor/node_modules/three/examples/jsm/",
+  "opentype":"../../vendor/node_modules/opentype.js/dist/opentype.module.js"}}</script>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script><script src="logos.js"></script>
+<style>
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;background:radial-gradient(ellipse at 50% 45%,transparent 60%,rgba(0,0,0,.18) 100%)}
+.kick{position:absolute;left:0;right:0;top:9vw;text-align:center;font-size:3.8vw;font-weight:800;letter-spacing:.22em;text-transform:uppercase;opacity:.6;z-index:5}
+canvas{z-index:1}
+</style></head><body><script type="module">
+import { E3D } from '../../references/engine3d.js';
+const { THREE } = E3D;
+const { seg, eo, spring, lerp, cl } = E;
+const V = {}, O = {};
+const kick = (t, c) => `<div class="kick" style="color:${c}">${t}</div>`;
+const sq = (t, a, d = 0.16) => Math.max(0, 1 - Math.abs(t - a) / d); // всплеск «сплющивания» в момент удара
+
+/* 1. ИНТРО: объёмный текст */
+const s1 = { dur: 3.6, bg: '#14161c', ink: '#fff', hl: '#ff7a2f', hlInk: '#14161c', trans: 'none',
+  cap: 'Теперь ролики — *в 3D*', capAt: 1.4,
+  sfx: [[0.15, 'whoosh_down', { dur: 0.5, gain: 0.5 }], [0.62, 'thud', { gain: 0.8 }], [1.0, 'whoosh', { dur: 0.5, gain: 0.4 }], [1.3, 'chime', { gain: 0.5 }]],
+  html: kick('3D-движок', '#fff'),
+  mount(el) { const v = V[1] = E3D.view(el, { floor: '#14161c', fov: 35, key: 2.8, rim: 2.2, env: 1.1, ground: '#3a3f4f' });
+    O.t3 = v.add(E3D.text3D('3D', { size: 1.7, depth: 0.55, bevel: 0.05, kind: 'gold' }));
+    O.t2 = v.add(E3D.text3D('ДВИЖОК', { size: 0.6, depth: 0.24, kind: 'plastic', color: '#ff7a2f' })); },
+  update(t) { const v = V[1]; const k = spring((t - 0.15) / 0.75);
+    O.t3.position.set(0, 2.15 + (1 - Math.min(1, k)) * 4, 0); O.t3.rotation.set(-0.12, (1 - spring((t - 0.15) / 1.1)) * -1.3 + Math.sin(t * 1.2) * 0.06, 0);
+    const s = sq(t, 0.62); O.t3.scale.set(1 + 0.08 * s, 1 - 0.12 * s, 1);
+    const k2 = spring((t - 0.9) / 0.6); O.t2.position.set(0, 0.62 - (1 - k2) * 1.4, 0.4); O.t2.scale.setScalar(0.6 + 0.4 * Math.min(1, k2)); O.t2.visible = t > 0.85;
+    v.orbit({ target: [0, 1.3, 0], radius: 12.8, angle: lerp(-16, 10, eo(seg(t, 0, 3.6))), height: 1.0 }); v.render(t); } };
+
+/* 2. ПРОДУКТ-ШОТ: банка падает, вращается, камера наезжает */
+const s2 = { dur: 5.0, bg: '#f3e4d0', ink: '#2b1a12', hl: '#2b1a12', hlInk: '#ffb347', trans: 'circle',
+  cap: 'Продукт-шот: *металл, этикетка, тени*', capAt: 1.3,
+  sfx: [[0.05, 'whoosh_down', { dur: 0.5, gain: 0.55 }], [0.55, 'thud', { gain: 0.9 }], [0.95, 'chime', { gain: 0.45 }], [2.6, 'sparkle', { dur: 0.8, gain: 0.4 }]],
+  html: kick('Продукт-шот', '#2b1a12'),
+  mount(el) { const v = V[2] = E3D.view(el, { floor: '#f3e4d0', ground: '#d8c3a8' });
+    O.can = v.add(E3D.can({ label: { title: 'ЗАРНИЦА', sub: 'COLD BREW', bg: '#fff7ec', ink: '#2b1a12', accent: '#ff7a2f' } })); },
+  update(t) { const v = V[2]; const c = O.can;
+    const fall = cl(t / 0.55); let y = 4.5 * (1 - fall * fall);
+    if (t > 0.55 && t < 0.95) y = 0.28 * Math.sin(Math.PI * (t - 0.55) / 0.4);
+    const s = sq(t, 0.55) + 0.5 * sq(t, 0.95, 0.1);
+    c.position.y = y; c.scale.set(1 + 0.07 * s, 1 - 0.13 * s, 1 + 0.07 * s); c.rotation.y = lerp(-3.6, 0.22, eo(seg(t, 0.3, 4.4)));
+    const k = eo(seg(t, 0.4, 5));
+    v.orbit({ target: [0, 0.62, 0], radius: lerp(8.4, 6.1, k), angle: lerp(-22, 14, k), height: lerp(1.6, 0.85, k) }); v.render(t); } };
+
+/* 3. ЛОГОТИПЫ: найдены автоматически (logos.mjs) и выдавлены в 3D */
+const BR = ['Telegram', 'Duolingo', 'Claude'];
+const s3 = { dur: 4.2, bg: '#1b1e27', ink: '#fff', hl: '#58cc02', hlInk: '#1b1e27', trans: 'wipe',
+  cap: 'Логотипы брендов — *сами в 3D*', capAt: 1.2,
+  sfx: [[0.3, 'pop'], [0.65, 'pop'], [1.0, 'pop'], [1.4, 'sparkle', { dur: 0.8, gain: 0.4 }]],
+  html: kick('Логотипы', '#fff'),
+  mount(el) { const v = V[3] = E3D.view(el, { floor: '#1b1e27', fov: 40, ground: '#2c3140', key: 2.6 });
+    O.tiles = [E3D.logoTile3D('Telegram', { size: 1.05 }), E3D.logoTile3D('Duolingo', { size: 1.05 }), E3D.logoTile3D('Claude', { size: 1.05 })];
+    O.tiles.forEach((x, i) => { x.position.set((i - 1) * 1.35, 0.85 + (i === 1 ? 0.25 : 0), 0); v.add(x); }); },
+  update(t) { const v = V[3];
+    O.tiles.forEach((x, i) => { const k = spring((t - 0.3 - i * 0.35) / 0.55); x.scale.setScalar(Math.max(0.001, k)); x.rotation.y = (1 - Math.min(1, k)) * Math.PI + Math.sin(t * 1.4 + i * 1.7) * 0.35; x.rotation.x = Math.sin(t * 1.1 + i) * 0.08; });
+    v.orbit({ target: [0, 0.95, 0], radius: 10.6, angle: Math.sin(t * 0.5) * 6, height: 0.7 }); v.render(t); } };
+
+/* 4. МАСКОТ: падение, сплющивание, отскок, конфетти */
+const s4 = { dur: 4.4, bg: '#ffb347', ink: '#2b1a12', hl: '#2b1a12', hlInk: '#ffb347', trans: 'circle',
+  cap: 'Персонажи — *живые*, с характером', capAt: 1.3,
+  sfx: [[0.0, 'whoosh_down', { dur: 0.45, gain: 0.5 }], [0.5, 'thud', { gain: 0.65 }], [0.55, 'pop'], [1.12, 'thud', { gain: 0.4 }], [2.4, 'success', { gain: 0.65 }], [2.45, 'sparkle', { dur: 1, gain: 0.5 }]],
+  html: `<div class="abs" id="ry" style="left:-50vw;top:-10vw;width:200vw;height:200vw;border-radius:50%;background:repeating-conic-gradient(rgba(255,255,255,.28) 0 7deg,transparent 7deg 20deg);z-index:0"></div>` + kick('Персонажи', '#2b1a12'),
+  mount(el) { const v = V[4] = E3D.view(el, { shadowOpacity: 0.3 });
+    O.m = v.add(E3D.mascot({ color: '#ff9a2e' })); O.cf = v.add(E3D.confetti(180, { at: 2.4, origin: [0, 1.4, 0], seed: 11 })); },
+  update(t, $) { const v = V[4]; const m = O.m; E.set($('#ry'), { r: t * 14 });
+    let y;
+    if (t < 0.5) { const f = t / 0.5; y = 1.25 + 4.5 * (1 - f * f); }
+    else if (t < 1.12) { const f = (t - 0.5) / 0.62; y = 1.25 + 0.9 * 4 * f * (1 - f); }
+    else y = 1.25 + Math.max(0, Math.sin((t - 2.3) * 7) * 0.25 * (t > 2.3 && t < 2.75 ? 1 : 0));
+    const s = sq(t, 0.5, 0.12) + 0.6 * sq(t, 1.12, 0.1);
+    const stretch = t < 0.5 ? 0.12 * (t / 0.5) : 0;
+    m.position.y = y; m.scale.set(1 + 0.16 * s - stretch * 0.5, 1 - 0.22 * s + stretch, 1 + 0.16 * s - stretch * 0.5);
+    m.userData.petals.rotation.z = t * 1.8; m.rotation.y = Math.sin(t * 1.6) * 0.25;
+    m.userData.setMood(t < 1.3 ? 'o' : 'smile'); const bk = (t % 2.1) > 1.95 ? 0.1 : 1; m.userData.blink(t < 0.5 ? 1 : bk);
+    v.orbit({ target: [0, 1.3, 0], radius: 9.5, angle: Math.sin(t * 0.8) * 8, height: 0.45 }); v.render(t); } };
+
+/* 5. ТЕЛЕФОН: интерфейс на экране анимируется по t */
+function chat(ctx, W, H, t) {
+  ctx.fillStyle = '#0f1115'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#e8eaf0'; ctx.font = '700 40px Inter'; ctx.textAlign = 'center'; ctx.fillText('Claude', W / 2, 160);
+  ctx.fillStyle = '#2a2d36'; ctx.fillRect(40, 190, W - 80, 2);
+  const bub = (x, y, w, h, c, a) => { ctx.globalAlpha = a; ctx.fillStyle = c; ctx.beginPath(); ctx.roundRect(x, y, w, h, 34); ctx.fill(); ctx.globalAlpha = 1; };
+  ctx.textAlign = 'left';
+  const a1 = cl((t - 0.9) / 0.3);
+  if (a1 > 0) { const dy = (1 - eo(a1)) * 40; bub(W - 520, 250 + dy, 470, 150, '#d97757', a1); ctx.globalAlpha = a1; ctx.fillStyle = '#fff'; ctx.font = '600 38px Inter'; ctx.fillText('Сделай рекламу', W - 485, 315 + dy); ctx.fillText('в 3D, пожалуйста', W - 485, 365 + dy); ctx.globalAlpha = 1; }
+  if (t > 1.5 && t < 2.4) { bub(50, 440, 170, 90, '#2a2d36', 1); for (let i = 0; i < 3; i++) { ctx.fillStyle = '#9aa0ad'; ctx.beginPath(); ctx.arc(95 + i * 40, 485 - Math.abs(Math.sin(t * 8 + i)) * 12, 11, 0, 7); ctx.fill(); } }
+  const a2 = cl((t - 2.4) / 0.3);
+  if (a2 > 0) { const dy = (1 - eo(a2)) * 40; bub(50, 440 + dy, 560, 210, '#2a2d36', a2); ctx.globalAlpha = a2; ctx.fillStyle = '#e8eaf0'; ctx.font = '600 38px Inter';
+    ['Готово! 60 fps,', 'тени, стекло, металл', 'и твой логотип ✓'].forEach((s, i) => ctx.fillText(s, 85, 510 + dy + i * 52)); ctx.globalAlpha = 1; }
+  const a3 = cl((t - 3.2) / 0.3);
+  if (a3 > 0) { const p = eo(cl((t - 3.2) / 1.2)); ctx.globalAlpha = a3; bub(50, 690, W - 100, 120, '#1b2a22', 1); ctx.fillStyle = '#56d364'; ctx.font = '700 34px Inter'; ctx.fillText('Рендер видео · ' + Math.round(p * 100) + '%', 85, 745);
+    ctx.fillStyle = '#2a3b31'; ctx.fillRect(85, 770, W - 170, 14); ctx.fillStyle = '#56d364'; ctx.fillRect(85, 770, (W - 170) * p, 14); ctx.globalAlpha = 1; }
+}
+const s5 = { dur: 4.8, bg: '#e9eef6', ink: '#1d1b19', hl: '#d97757', hlInk: '#fff', trans: 'circle',
+  cap: 'Экраны и интерфейсы — *живые*', capAt: 0.6,
+  sfx: [[0.9, 'pop'], [1.6, 'tick'], [1.85, 'tick'], [2.1, 'tick'], [2.4, 'pop'], [3.2, 'click'], [4.3, 'chime', { gain: 0.45 }]],
+  html: kick('Интерфейсы', '#1d1b19'),
+  mount(el) { const v = V[5] = E3D.view(el, { floor: '#e9eef6', ground: '#c7cfdb' });
+    O.ph = v.add(E3D.phone({ screen: chat })); O.ph.scale.setScalar(1.6); },
+  update(t) { const v = V[5]; const k = spring(t / 0.9);
+    O.ph.position.y = 1.55 + (1 - Math.min(1, k)) * -2.5 + Math.sin(t * 1.5) * 0.04; O.ph.rotation.set(-0.07, lerp(-1.3, -0.22, Math.min(1.1, k)) + t * 0.05, 0.02);
+    v.orbit({ target: [0, 1.5, 0], radius: 9, angle: lerp(-8, 6, eo(seg(t, 0, 4.8))), height: 0.35 }); v.render(t); } };
+
+/* 6. МАТЕРИАЛЫ */
+const s6 = { dur: 4.4, bg: '#dfe3ec', ink: '#1d1b19', hl: '#1d1b19', hlInk: '#e8b64c', trans: 'wipe',
+  cap: 'Стекло, хром, золото, *глина*', capAt: 0.5,
+  sfx: [[0.15, 'swell', { dur: 3, gain: 0.45 }], [1.1, 'clink', { gain: 0.5 }], [2.3, 'sparkle', { dur: 0.8, gain: 0.35 }]],
+  html: kick('Материалы', '#1d1b19'),
+  mount(el) { const v = V[6] = E3D.view(el, { floor: '#dfe3ec', ground: '#aeb6c6', key: 2.4, rim: 2.0, env: 1.1 });
+    // цветные полосы за стеклянным шаром — чтобы было что преломлять
+    [['#ff7a2f', -1.2], ['#1cb0f6', -0.6], ['#58cc02', 0]].forEach(([c, x]) => { const b = E3D.box(0.22, 3.4, 0.22, { kind: 'plastic', color: c }); b.position.set(x - 0.6, 1.7, -2.2); v.add(b); });
+    O.mt = [E3D.sphere(0.55, { kind: 'glass', color: '#eaf6ff' }),
+      E3D.shade(new THREE.Mesh(new THREE.TorusKnotGeometry(0.33, 0.11, 200, 28), E3D.mat('chrome'))),
+      E3D.torus(0.42, 0.13, { kind: 'gold' }),
+      E3D.box(0.85, 0.85, 0.85, { r: 0.2, kind: 'clay', color: '#ff8fb1' })];
+    [[-0.85, 2.35], [0.85, 2.35], [-0.85, 0.72], [0.85, 0.72]].forEach((p, i) => { O.mt[i].position.set(p[0], p[1], 0); v.add(O.mt[i]); }); },
+  update(t) { const v = V[6];
+    O.mt.forEach((x, i) => { const k = spring((t - 0.1 - i * 0.18) / 0.5); x.scale.setScalar(Math.max(0.001, k)); x.rotation.set(t * (0.5 + i * 0.15), t * (0.7 - i * 0.1), 0); });
+    v.orbit({ target: [0, 1.5, 0], radius: lerp(11.6, 10.4, eo(seg(t, 0, 4.4))), angle: Math.sin(t * 0.6) * 7, height: 0.8 }); v.render(t); } };
+
+/* 7. ФИНАЛ */
+const s7 = { dur: 4.0, bg: '#fff7ec', ink: '#2b1a12', hl: '#ff7a2f', hlInk: '#fff', trans: 'circle',
+  cap: 'Всё это — *код*, а не After Effects', capAt: 1.2,
+  sfx: [[0.1, 'whoosh', { dur: 0.5, gain: 0.45 }], [0.55, 'thud', { gain: 0.5 }], [1.0, 'success', { gain: 0.65 }], [1.05, 'sparkle', { dur: 1, gain: 0.45 }]],
+  mount(el) { const v = V[7] = E3D.view(el, { floor: '#fff7ec', ground: '#e2cdb2', fov: 35 });
+    O.f1 = v.add(E3D.text3D('СДЕЛАНО', { size: 0.62, depth: 0.24, kind: 'plastic', color: '#2b1a12' }));
+    O.f2 = v.add(E3D.text3D('КОДОМ', { size: 0.78, depth: 0.3, kind: 'plastic', color: '#ff7a2f' }));
+    O.fm = v.add(E3D.mascot({ color: '#ffb347' })); O.fm.scale.setScalar(0.62);
+    O.fc = v.add(E3D.confetti(160, { at: 1.0, origin: [0, 0.8, 0.5], seed: 23 })); },
+  update(t) { const v = V[7];
+    const a = spring((t - 0.05) / 0.6), b = spring((t - 0.3) / 0.6);
+    O.f1.position.set(0, 1.85 + (1 - Math.min(1, a)) * 2, 0); O.f1.rotation.x = (1 - Math.min(1, a)) * -1.2;
+    O.f2.position.set(0, 0.9 + (1 - Math.min(1, b)) * 2, 0.1); O.f2.rotation.x = (1 - Math.min(1, b)) * -1.2;
+    const m = O.fm; m.position.set(0, 3.35 + Math.abs(Math.sin(t * 4)) * 0.3 * cl((t - 0.8) * 3), -0.3); m.userData.petals.rotation.z = t * 2; m.userData.blink((t % 1.9) > 1.78 ? 0.1 : 1);
+    v.orbit({ target: [0, 1.75, 0], radius: 13.6, angle: lerp(12, -8, eo(seg(t, 0, 4))), height: 0.8 }); v.render(t); } };
+
+E.run({ hl: '#ff7a2f', progress: 'bar', music: { style: 'lofi', from: 0.4, drums: 'scene:1+0.55', bpm: 88, gain: 0.45 }, scenes: [s1, s2, s3, s4, s5, s6, s7] });
+</script></body></html>

@@ -19,6 +19,7 @@
  *     trans: 'fade'|'up'|'left'|'zoom'|'circle'|'wipe'|'none', // как сцена входит
  *     cam: [1, 1.08],         // плавный наезд камеры на сцену (масштаб начало→конец)
  *     update(lt, $, p) {}     // lt — секунды от начала сцены, $ — querySelector внутри сцены, p = lt/dur
+ *     mount(el, $) {}         // один раз при создании сцены (3D: E3D.view(el, ...))
  *     sfx: [[0.5, 'pop'], [1.2, 'pour', {dur: 2, gain: .7, pan: -.3}]]  // звуки по времени сцены (scripts/sfx.py --list)
  *   }],
  *   music: { style: 'lofi', from: 'scene:2+0.3', drums: 'scene:4+1.2', bpm: 86, gain: 0.5 }  // фоновая музыка
@@ -111,6 +112,8 @@
     });
     const total = acc;
     window.__total = total;
+    // mount(el, $, scene) — один раз после создания DOM сцены (например, вставить 3D-холст: E3D.view)
+    scenes.forEach((s) => s.mount && s.mount(s.camEl, s.$, s));
 
     // звук: события сцен в абсолютном времени + музыка → window.__AUDIO (его читает render.mjs)
     const abs = (v) => {

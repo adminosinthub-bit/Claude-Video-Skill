@@ -14,9 +14,11 @@
 - `scripts/render.mjs` — HTML → MP4: параллельный детерминированный рендер, пресеты, `--max` (60 fps + motion blur), автозвук из сцен, фрагменты
 - `scripts/sfx.py` — синтез звуков и лоу-фай музыки по таймлайну сцен (numpy)
 - `scripts/frame.mjs` — быстрый просмотр отдельных кадров
+- `scripts/serve.mjs` — локальный http-сервер для рендера (ES-модули 3D не работают по file://)
 - `scripts/contact-sheet.sh` — контактный лист кадров для анализа (авто-раскладка для вертикальных видео)
 - `scripts/logos.mjs` — автопоиск логотипов брендов (simple-icons → сайт → Wikimedia → favicon) и подстановка в HTML; `scripts/logos.selftest.mjs` — самотест
 - `scripts/check-env.sh` — проверка node / playwright / ffmpeg / curl
+- `references/engine3d.js` — 3D-движок (Three.js): свет, тени, материалы, банка/бутылка/телефон/маскот, объёмный текст с кириллицей, 3D-логотипы, GLB-модели; `scripts/setup-3d.mjs` ставит зависимости в `vendor/`
 - `references/engine.js` — движок сцен (субтитры с подсветкой, прогресс, переходы, easing)
 - `assets/logos/_custom/` — ваш бренд-кит (приоритет над автопоиском)
 - `references/parts.js` — логотипы `P.logo`/`P.logoTile`, маскоты (бот, сова), иконки, огонёк серии, телефон, касание пальцем, конфетти, окно macOS, пузыри чата

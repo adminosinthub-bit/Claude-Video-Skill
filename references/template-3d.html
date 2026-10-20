@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Шаблон 3D</title>
+<!-- пути — от файла ролика (work/<название>/ или examples/<название>/) -->
+<script type="importmap">{"imports":{
+  "three":"../../vendor/node_modules/three/build/three.module.js",
+  "three/addons/":"../../vendor/node_modules/three/examples/jsm/",
+  "opentype":"../../vendor/node_modules/opentype.js/dist/opentype.module.js"}}</script>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script>
+</head><body><script type="module">
+import { E3D } from '../../references/engine3d.js';
+const { seg, eo, spring } = E;
+let v, can;
+E.run({ hl: '#ff7a2f', progress: 'bar', scenes: [
+  { dur: 4, bg: '#f3e4d0', ink: '#2b1a12', cap: 'Это *3D*-сцена',
+    mount(el) {                                   // один раз: создать 3D-вид и объекты
+      v = E3D.view(el, { floor: '#f3e4d0' });     // студийный фон + мягкие тени
+      can = v.add(E3D.can({ label: { title: 'БРЕНД', sub: 'COLD BREW' } }));
+    },
+    update(t) {                                   // каждый кадр: двигать по t и отрисовать
+      can.rotation.y = t * 0.9;
+      can.position.y = (1 - spring(t / 0.8)) * 3;
+      v.orbit({ target: [0, 0.9, 0], radius: 6, angle: 15 + t * 4, height: 1.2 });
+      v.render(t);
+    } },
+]});
+</script></body></html>
