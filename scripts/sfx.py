@@ -10,7 +10,7 @@
    "cues":  [{"t": 0.2, "type": "alarm", "dur": 1.3, "gain": 0.8, "pan": 0}, ...],
    "music": {"style": "lofi", "from": 7.5, "drums": 14.0, "bpm": 86, "gain": 0.5}}
 Звуки: alarm click tick snooze whoosh whoosh_down rise thud pop psst pour clink slurp
-       chime success sparkle swell bass drip splash slice squish
+       chime success sparkle swell bass drip splash slice squish key key_space key_enter
 """
 import json
 import sys
@@ -293,12 +293,62 @@ def s_squish():
     return norm(y, 0.7)
 
 
+# клавиатура ноутбука: у каждого удара свой сид (счётчик вызовов) — щелчки чуть разные, как у живых клавиш;
+# свой генератор, чтобы не сдвигать случайность остальных звуков
+_KEY_N = [0]
+
+
+def _key_hit(r, body_f, body_dec, click_hi, rel_gain, click_g=1.0):
+    """Удар ножничной клавиши: щелчок пластика + короткий «тук» корпуса + тихий отпуск через 35–60 мс."""
+    n = int(0.11 * SR)
+    t = ts(0.11)
+    k = r.uniform(0.9, 1.1)
+    m = int(0.012 * SR)
+    click = pad_to(fft_filter(r.standard_normal(m), 1600 * k, click_hi * k), n) * env(n, 0.0004, 0.0022)
+    click /= np.max(np.abs(click)) + 1e-9
+    thock = fft_filter(r.standard_normal(n), body_f * 0.6 * k, body_f * 2.4 * k) * env(n, 0.001, body_dec)
+    thock /= np.max(np.abs(thock)) + 1e-9
+    body = 0.7 * thock + 0.3 * np.sin(2 * np.pi * body_f * k * t) * env(n, 0.0012, body_dec * 0.7)
+    tick = np.sin(2 * np.pi * r.uniform(1150, 1650) * t) * env(n, 0.0005, 0.0035)
+    y = click * click_g + 0.55 * body + 0.2 * tick
+    rel = pad_to(fft_filter(r.standard_normal(m), 2400 * k, 8500 * k), n) * env(n, 0.0003, 0.0016)
+    rel /= np.max(np.abs(rel)) + 1e-9
+    j = int(r.uniform(0.035, 0.06) * SR)
+    y[j:] += rel[: n - j] * r.uniform(0.16, 0.28) * rel_gain
+    return y
+
+
+def s_key():
+    """Обычная клавиша: мягкий короткий щелчок."""
+    _KEY_N[0] += 1
+    r = np.random.default_rng(9100 + _KEY_N[0])
+    return norm(_key_hit(r, r.uniform(240, 380), 0.011, 7000, 1.0), r.uniform(0.6, 0.78))
+
+
+def s_key_space():
+    """Пробел: ниже и глуше, с призвуком стабилизатора."""
+    _KEY_N[0] += 1
+    r = np.random.default_rng(9100 + _KEY_N[0])
+    y = _key_hit(r, r.uniform(150, 200), 0.022, 4200, 1.4, 0.55)
+    j = int(r.uniform(0.004, 0.007) * SR)
+    y[j:] += _key_hit(r, 170, 0.012, 4500, 0.0)[: len(y) - j] * 0.35
+    return norm(y, 0.8)
+
+
+def s_key_enter():
+    """Enter: громче и плотнее, с отчётливым отпуском."""
+    _KEY_N[0] += 1
+    r = np.random.default_rng(9100 + _KEY_N[0])
+    return norm(_key_hit(r, r.uniform(185, 230), 0.02, 5500, 1.8, 0.75), 0.9)
+
+
 SOUNDS = {
     'alarm': s_alarm, 'click': s_click, 'tick': s_tick, 'snooze': s_snooze, 'whoosh': s_whoosh,
     'whoosh_down': s_whoosh_down, 'rise': s_rise, 'thud': s_thud, 'pop': s_pop, 'psst': s_psst,
     'pour': s_pour, 'clink': s_clink, 'slurp': s_slurp, 'chime': s_chime, 'success': s_success,
     'sparkle': s_sparkle, 'swell': s_swell, 'bass': s_bass,
     'drip': s_drip, 'splash': s_splash, 'slice': s_slice, 'squish': s_squish,
+    'key': s_key, 'key_space': s_key_space, 'key_enter': s_key_enter,
 }
 WITH_DUR = {'alarm', 'whoosh', 'whoosh_down', 'rise', 'pour', 'slurp', 'sparkle', 'swell'}
 REVERB = {'chime', 'success', 'sparkle', 'swell', 'clink', 'pop', 'drip', 'splash'}
