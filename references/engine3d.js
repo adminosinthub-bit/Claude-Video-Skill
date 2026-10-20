@@ -420,7 +420,7 @@ export function enhance(m, o = {}) {
   m.customProgramCacheKey = () => key;
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
-    const ty = (v) => (typeof v === 'number' ? 'float' : (typeof v === 'string' || v.isColor || v.isVector3) ? 'vec3' : v.isVector2 ? 'vec2' : v.isVector4 ? 'vec4' : 'float');
+    const ty = (v) => (typeof v === 'number' ? 'float' : (typeof v === 'string' || v.isColor || v.isVector3) ? 'vec3' : v.isVector2 ? 'vec2' : v.isVector4 ? 'vec4' : v.isTexture ? 'sampler2D' : 'float');
     const decl = Object.entries(o.uniforms || {}).map(([k, v]) => (Array.isArray(v) ? `uniform ${ty(v[0])} ${k}[${v.length}];` : `uniform ${ty(v)} ${k};`)).join('\n');
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>\nvarying vec3 vE3dP; varying vec3 vE3dSeed; varying vec3 vE3dN;\n#ifdef E3D_SEED\nattribute vec3 aSeed;\n#endif\n${o.rest ? 'attribute vec3 aRest;' : ''}`)
