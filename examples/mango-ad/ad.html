@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Сочное манго</title>
+<script type="importmap">{"imports":{
+  "three":"../../vendor/node_modules/three/build/three.module.js",
+  "three/addons/":"../../vendor/node_modules/three/examples/jsm/",
+  "opentype":"../../vendor/node_modules/opentype.js/dist/opentype.module.js"}}</script>
+<script src="../../references/engine.js"></script>
+<style>
+.kick{position:absolute;left:0;right:0;top:9vw;text-align:center;font-size:3.8vw;font-weight:800;letter-spacing:.22em;text-transform:uppercase;opacity:.75;z-index:5;text-shadow:0 .2vw 1.2vw rgba(20,10,5,.55)}
+canvas{z-index:1}
+</style></head><body><script type="module">
+import { E3D } from '../../references/engine3d.js';
+import { F } from '../../references/food3d.js';
+const { THREE } = E3D;
+const { seg, eo, ei, spring, lerp, cl } = E;
+const V = {}, O = {};
+const kick = (t, c) => `<div class="kick" style="color:${c}">${t}</div>`;
+const DARK = '#140a05', CREAM = '#f7e6cc';
+const moody = { light: 'product', floor: DARK, envBase: '#0c0604', envTop: '#3a2a1c', bloom: { strength: 0.32, radius: 0.5, threshold: 0.82 }, grade: { warmth: 0.45, vignette: 0.45, grain: 0.022, contrast: 1.08, saturation: 1.12 } };
+let sd = 5; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+
+// капля на кожуре целого манго: по долготе/широте, может сползать вниз (по поверхности, не сквозь неё)
+const skinBead = (lon, lat0, r, t0, lat1 = null, t1 = 0, t2 = 0) => (t) => {
+  if (t < t0) return null;
+  const g = Math.min(1, (t - t0) / 0.4);
+  const k = lat1 === null ? 0 : ei(cl((t - t1) / (t2 - t1)));
+  const s = F.mangoSurface(lon + Math.sin(k * 3) * 0.03, lat1 === null ? lat0 : lerp(lat0, lat1, k));
+  const rr = r * (0.3 + 0.7 * g) * (1 + 0.25 * k);
+  return { p: s.p.map((x, i) => x + s.n[i] * rr * 0.42), s: [rr, rr * 0.55, rr * (1 + 0.5 * k)], dir: s.n };
+};
+// капля на срезе щёчки (координаты группы щёчки: срез в плоскости z=0, смотрит в -z)
+const faceBead = (u, v, r, t0, dv = 0, t1 = 0, t2 = 0) => (t) => {
+  if (t < t0) return null;
+  const g = Math.min(1, (t - t0) / 0.45), k = dv ? ei(cl((t - t1) / (t2 - t1))) : 0, rr = r * (0.3 + 0.7 * g) * (1 + 0.2 * k);
+  return { p: [u + Math.sin(k * 4) * 0.02, v - dv * k, -rr * 0.42], s: [rr, rr * 0.55, rr * (1 + 0.6 * k)], dir: [0, 0, -1] };
+};
+
+/* 1. ХУК: целое манго в капельках сока */
+const s1 = { dur: 4.2, bg: DARK, ink: '#fff', hl: '#ff8a00', hlInk: '#140a05', trans: 'none',
+  cap: 'Осторожно: *очень* сочно', capAt: 1.2,
+  sfx: [[0.1, 'swell', { dur: 3, gain: 0.3 }], [1.0, 'drip', { gain: 0.3 }], [1.6, 'drip', { gain: 0.35, pan: 0.2 }], [3.7, 'drip', { gain: 0.4 }]],
+  html: kick('Манго', '#ffd9a8'),
+  mount(el) { const v = V[1] = E3D.view(el, moody);
+    O.m = v.add(F.mango()); v.add(E3D.contactShadow(1.9, 1.4, 0.6));
+    sd = 7; const list = [];
+    for (let i = 0; i < 30; i++) list.push(skinBead(-0.25 + rnd() * 1.15, -0.6 + rnd() * 1.25, 0.012 + rnd() * 0.024, 0.2 + rnd() * 1.6));
+    list.push(skinBead(0.42, 0.62, 0.036, 0.3, -0.42, 1.4, 4.0));
+    O.m.userData.inner.add(F.drops(list, { depth: 0.6 })); },
+  update(t) { const v = V[1]; O.m.rotation.y = lerp(-1.05, -0.38, eo(seg(t, 0, 4.2)));
+    v.orbit({ target: [0, 1.0, 0], radius: lerp(7.2, 5.6, eo(seg(t, 0, 4.2))), angle: lerp(-6, 4, seg(t, 0, 4.2)), height: lerp(0.7, 0.3, seg(t, 0, 4.2)) }); v.render(t); } };
+
+/* 2. РАЗРЕЗ: нож проходит насквозь, щёчка отходит, брызги в слоу-мо */
+const s2 = { dur: 4.6, bg: DARK, ink: '#fff', hl: '#ff8a00', hlInk: '#140a05', trans: 'none',
+  cap: 'Один разрез —', capAt: 1.15,
+  sfx: [[0.45, 'whoosh', { dur: 0.5, gain: 0.45 }], [0.95, 'slice', { gain: 0.8 }], [1.02, 'squish', { gain: 0.6 }], [1.1, 'splash', { gain: 0.35 }], [2.6, 'drip', { gain: 0.3 }]],
+  html: kick('Разрез', '#ffd9a8'),
+  mount(el) { const v = V[2] = E3D.view(el, moody);
+    const c = O.cut = F.mangoCut(); v.add(c.body, c.cheek); v.add(E3D.contactShadow(2.2, 1.6, 0.55));
+    O.knife = v.add(F.knife());
+    // брызги — с переднего края разреза (по линии ножа), а не из середины плода
+    const org = [c.section.cx + c.section.rx + 0.04, c.section.cy + c.lift + 0.15, c.cutZ + 0.03];
+    O.spray = v.add(F.drops([...F.spray({ n: 60, origin: org, dir: [1, 0.7, 0.55], spread: 0.6, speed: [1.4, 3.0], size: [0.014, 0.042], at: 0.95, slow: 0.55, seed: 12 }),
+      ...F.spray({ n: 30, origin: [c.section.cx + 0.15, c.section.cy + c.lift + c.section.ry * 0.85, c.cutZ + 0.03], dir: [0.35, 1, 0.6], spread: 0.55, speed: [1.2, 2.4], size: [0.012, 0.032], at: 0.8, slow: 0.55, seed: 31 })], { depth: 0.6 })); },
+  update(t) { const v = V[2], c = O.cut, k = O.knife;
+    const d = ei(seg(t, 0.45, 1.0)), up = eo(seg(t, 1.35, 2.1));
+    k.position.set(lerp(-0.95, -0.6, d) + up * 1.2, lerp(3.1, 0.12, d) + up * 2.6, c.cutZ); k.rotation.z = lerp(0.12, -0.04, d) + up * 0.5; k.visible = t < 2.3;
+    const sep = eo(seg(t, 1.0, 2.6)), turn = E.smooth(seg(t, 1.15, 3.1));
+    c.cheek.position.set(c.section.cx + sep * 0.95, c.section.cy + c.lift + Math.sin(turn * Math.PI) * 0.12, c.cutZ + sep * 0.55); c.cheek.rotation.set(-0.08 * turn, Math.PI * 0.88 * turn, 0);
+    c.body.position.set(c.section.cx - sep * 0.45, c.section.cy + c.lift, c.cutZ - sep * 0.35); c.body.rotation.y = 0.35 * sep;
+    const cam = eo(seg(t, 0.9, 3.4));
+    v.orbit({ target: [lerp(0.2, 0.3, cam), lerp(1.05, 0.95, cam), lerp(0.3, 0.15, cam)], radius: lerp(6.4, 8.2, cam), angle: lerp(24, 14, cam), height: lerp(0.75, 0.9, cam) }); v.render(t); } };
+
+/* 3. МАКРО: блик ползёт по мокрой мякоти, сок выступает и стекает */
+const s3 = { dur: 4.6, bg: DARK, ink: '#fff', hl: '#ff8a00', hlInk: '#140a05', trans: 'circle',
+  cap: '…и сок выступает *сам*', capAt: 0.5,
+  sfx: [[0.6, 'drip', { gain: 0.3 }], [1.3, 'drip', { gain: 0.25, pan: -0.2 }], [2.1, 'drip', { gain: 0.3, pan: 0.3 }], [4.0, 'drip', { gain: 0.55 }]],
+  html: kick('Крупно', '#ffd9a8'),
+  mount(el) { const v = V[3] = E3D.view(el, { ...moody, dof: { focus: 2.6, aperture: 0.0022, maxblur: 0.01 } });
+    const c = O.mac = F.mangoCut(); v.add(c.cheek);
+    c.cheek.position.set(0, 1.0, 0); c.cheek.rotation.y = Math.PI;
+    O.sb = v.softbox({ w: 2.6, h: 1.1, intensity: 9, color: '#fff3e0', pos: [-3, 2.4, 3], target: [0, 1, 0] });
+    const ry = c.section.ry; sd = 21; const list = [];
+    for (let i = 0; i < 9; i++) list.push(faceBead(-0.38 + rnd() * 0.7, -0.7 + rnd() * 1.0, 0.025 + rnd() * 0.03, 0.2 + rnd() * 1.6));
+    list.push(faceBead(0.12, 0.05, 0.045, 0.4, 0.5, 1.8, 3.8), faceBead(-0.22, -0.1, 0.038, 0.7, 0.42, 2.3, 4.3));
+    list.push(F.drip({ pos: [0.06, -ry * 0.93, -0.03], t0: 2.2, t1: 3.95, size: 0.06, slow: 0.7, floor: -3 }));
+    c.cheek.add(F.drops(list, { depth: 0.55 })); },
+  update(t) { const v = V[3];
+    O.sb.userData.move([lerp(-3.2, 3.2, E.smooth(seg(t, 0.2, 4.4))), 2.3, 2.8]);
+    const k = eo(seg(t, 0, 4.6));
+    // кадр — нижний край дольки: сверху мокрая мякоть, снизу тёмный фон, куда срывается капля
+    v.look([lerp(1.0, 0.75, k), lerp(0.85, 0.75, k), lerp(3.1, 2.7, k)], [0, lerp(0.58, 0.5, k), 0]); v.focus([0, 0.4, 0]); v.render(t); } };
+
+/* 4. СЛОУ-МО: капля набухает на кончике дольки, камера едет за ней вниз — корона и рябь */
+const DROP = { y: 2.7, size: 0.085, t1: 1.0, slow: 0.4 };
+const IMPACT = DROP.t1 + Math.sqrt((2 * (DROP.y - DROP.size * 0.9 - 0.02)) / 9.8) / DROP.slow;
+const dropY = (t) => Math.max(0, t < DROP.t1 ? DROP.y : DROP.y - DROP.size * 0.9 - 4.9 * ((t - DROP.t1) * DROP.slow) ** 2);
+const softplus = (x, k) => k * Math.log1p(Math.exp(x / k));
+const s4 = { dur: 4.8, bg: DARK, ink: '#fff', hl: '#ff8a00', hlInk: '#140a05', trans: 'wipe',
+  cap: 'Капля за каплей — *чистый сок*', capAt: IMPACT + 0.15,
+  sfx: [[0.5, 'drip', { gain: 0.25 }], [IMPACT - 0.02, 'drip', { gain: 0.75 }], [IMPACT + 0.02, 'splash', { gain: 0.6 }], [IMPACT + 1.2, 'drip', { gain: 0.3 }]],
+  html: kick('Слоу-мо', '#ffd9a8'),
+  mount(el) { const v = V[4] = E3D.view(el, { ...moody, light: 'dramatic', beauty: 1.0, backdrop: 2.2, backdropColor: '#ff9a40', bloom: { strength: 0.4, radius: 0.45, threshold: 0.8 } });
+    const c = O.dc = F.mangoCut(); v.add(c.cheek);
+    c.cheek.rotation.y = Math.PI; c.cheek.position.set(-0.18, DROP.y + c.section.ry * 0.93 + 0.08, -0.03); // кончик дольки — ровно над точкой падения
+    c.cheek.traverse((o) => { o.castShadow = false; });
+    sd = 33; const list = [];
+    for (let i = 0; i < 5; i++) list.push(faceBead(-0.3 + rnd() * 0.6, -0.75 + rnd() * 0.4, 0.025 + rnd() * 0.025, rnd() * 0.5));
+    c.cheek.add(F.drops(list, { depth: 0.55 }));
+    O.pool = v.add(F.pool({ r: 8, bg: DARK, fade: [0.3, 0.75], impacts: [[0, 0, IMPACT, 0.14]], slow: 0.4 }));
+    O.sp = v.add(F.splash({ pos: [0, 0, 0], at: IMPACT, size: 1.05, slow: 0.4 }));
+    v.add(F.drops([F.drip({ pos: [0, DROP.y, 0], t0: 0.05, t1: DROP.t1, size: DROP.size, slow: DROP.slow, floor: 0.02 })], { depth: 0.6 })); },
+  update(t) { const v = V[4];
+    // камера «едет» за каплей: мягкие ограничения сверху (кончик дольки) и снизу (лужица), без рывков на краях
+    const raw = 0.42 + softplus(dropY(t) - 0.45, 0.3), ty = 2.45 - softplus(2.45 - raw, 0.2);
+    v.orbit({ target: [0, ty, 0], radius: lerp(3.9, 3.5, eo(seg(t, 0, 4.8))), angle: lerp(-4, 6, seg(t, 0, 4.8)), height: 0.22 + 0.1 * (ty - 0.42) }); v.render(t); } };
+
+/* 5. «ЁЖИК»: кубики мякоти выворачиваются */
+const s5 = { dur: 4.6, bg: CREAM, ink: '#2b1a12', hl: '#ff7a00', hlInk: '#fff', trans: 'circle',
+  cap: 'Спелое. Мягкое. *Сочное.*', capAt: 1.4,
+  sfx: [[0.35, 'squish', { gain: 0.6 }], [0.55, 'pop', { gain: 0.45 }], [0.75, 'pop', { gain: 0.4, pan: 0.3 }], [0.95, 'pop', { gain: 0.4, pan: -0.3 }], [1.2, 'sparkle', { dur: 0.7, gain: 0.3 }], [3.1, 'drip', { gain: 0.3 }]],
+  html: kick('Ёжик', '#2b1a12'),
+  mount(el) { const v = V[5] = E3D.view(el, { light: 'product', floor: CREAM, envBase: '#3a2d22', envTop: '#a8927a', grade: { warmth: 0.25, vignette: 0.25, grain: 0.015, saturation: 1.1 } });
+    O.hh = v.add(F.hedgehog()); O.hh.rotation.x = -0.8; O.hh.position.set(0, 0.78, 0); v.add(E3D.contactShadow(1.9, 1.4, 0.45));
+    v.add(F.drops([F.drip({ pos: [0.18, 0.22, 0.55], t0: 2.0, t1: 3.05, size: 0.045, slow: 0.7 }), F.drip({ pos: [-0.3, 0.3, 0.45], t0: 2.6, t1: 3.9, size: 0.04, slow: 0.7 })], { depth: 0.6 })); },
+  update(t) { const v = V[5]; const k = Math.min(1.08, spring((t - 0.3) / 1.4)); O.hh.userData.setK(Math.max(0, k));
+    O.hh.rotation.z = Math.sin(t * 0.8) * 0.06;
+    v.orbit({ target: [0, 0.85, 0], radius: lerp(6.7, 6.1, eo(seg(t, 0, 4.6))), angle: lerp(-22, 18, E.smooth(seg(t, 0, 4.6))), height: 1.25 }); v.render(t); } };
+
+/* 6. ФИНАЛ */
+const s6 = { dur: 4.4, bg: CREAM, ink: '#2b1a12', hl: '#ff7a00', hlInk: '#fff', trans: 'circle',
+  cap: 'Попробуй *сочное* манго', capAt: 1.3,
+  sfx: [[0.1, 'whoosh', { dur: 0.5, gain: 0.4 }], [0.6, 'squish', { gain: 0.4 }], [1.0, 'success', { gain: 0.55 }], [1.05, 'sparkle', { dur: 0.9, gain: 0.35 }]],
+  html: `<div class="abs" id="tg" style="left:0;right:0;top:13vw;text-align:center;font-size:4.6vw;font-weight:700;letter-spacing:.06em;color:#8a5a2b;z-index:5">спелое · сладкое · сочное</div>`,
+  mount(el) { const v = V[6] = E3D.view(el, { light: 'product', floor: CREAM, envBase: '#3a2d22', envTop: '#a8927a', bloom: { strength: 0.25, radius: 0.4, threshold: 0.9 }, grade: { warmth: 0.25, vignette: 0.25, grain: 0.015, saturation: 1.1 } });
+    O.fm = v.add(F.mango()); O.fm.position.set(0.62, 0, -0.45); O.fm.rotation.y = -0.6;
+    O.fh = v.add(F.hedgehog()); O.fh.scale.setScalar(0.62); O.fh.rotation.set(-0.85, 0.35, 0.1); O.fh.position.set(-0.6, 0.48, 0.55); O.fh.userData.setK(1);
+    O.tt = v.add(E3D.text3D('МАНГО', { size: 0.44, depth: 0.2, kind: 'glossy', color: '#ff8a00' }));
+    v.add(E3D.contactShadow(3.2, 2.0, 0.4)); },
+  update(t, $) { const v = V[6]; const a = spring((t - 0.05) / 0.6);
+    O.tt.position.set(0, 2.75 + (1 - Math.min(1, a)) * 1.5, -0.3); O.tt.rotation.x = (1 - Math.min(1, a)) * -1;
+    O.fm.rotation.y = -0.6 + t * 0.15; E.set($('#tg'), { o: eo(seg(t, 0.9, 1.5)) });
+    v.orbit({ target: [0, 1.35, 0], radius: 9.2, angle: lerp(10, -6, eo(seg(t, 0, 4.4))), height: 0.9 }); v.render(t); } };
+
+E.run({ hl: '#ff8a00', progress: 'bar', music: { style: 'lofi', from: 0.3, drums: 'scene:1+1.0', bpm: 90, gain: 0.4 }, scenes: [s1, s2, s3, s4, s5, s6] });
+</script></body></html>

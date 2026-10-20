@@ -10,7 +10,7 @@
    "cues":  [{"t": 0.2, "type": "alarm", "dur": 1.3, "gain": 0.8, "pan": 0}, ...],
    "music": {"style": "lofi", "from": 7.5, "drums": 14.0, "bpm": 86, "gain": 0.5}}
 Звуки: alarm click tick snooze whoosh whoosh_down rise thud pop psst pour clink slurp
-       chime success sparkle swell bass
+       chime success sparkle swell bass drip splash slice squish
 """
 import json
 import sys
@@ -254,14 +254,54 @@ def s_bass():
     return norm(y, 0.95)
 
 
+def s_drip():
+    """Капля воды/сока: «плинк» — тон с быстро растущей высотой."""
+    n = int(0.16 * SR)
+    y = sweep(480, 1550, 0.16) * env(n, 0.001, 0.035)
+    return norm(y + 0.15 * pad_to(s_click(), n), 0.7)
+
+
+def s_splash():
+    """Всплеск: шумовой удар, низкий «плюх» и рассыпь мелких капель."""
+    n = int(0.9 * SR)
+    burst = band(0.9, 300, 6000) * env(n, 0.002, 0.16)
+    thump = sweep(160, 60, 0.9) * env(n, 0.002, 0.08)
+    y = burst * 0.8 + thump * 0.6
+    for _ in range(14):
+        b = s_drip() * rng.uniform(0.12, 0.35)
+        j = int(rng.uniform(0.04, 0.6) * SR)
+        y[j:j + len(b)] += b[: n - j]
+    return norm(y, 0.85)
+
+
+def s_slice():
+    """Разрез ножом: короткий свист лезвия + металлический призвук + влажный хруст."""
+    n = int(0.6 * SR)
+    sw = pad_to(_band_sweep(0.22, 2500, 9000, shape=0.8), n)
+    t = ts(0.6)
+    ring = (np.sin(2 * np.pi * 3400 * t) + 0.5 * np.sin(2 * np.pi * 5150 * t)) * env(n, 0.001, 0.12)
+    wet = band(0.6, 400, 3000) * env(n, 0.005, 0.06) * (0.6 + 0.4 * np.sin(2 * np.pi * 37 * t))
+    return norm(sw * 0.7 + ring * 0.25 + np.roll(wet, int(0.12 * SR)) * 0.6, 0.8)
+
+
+def s_squish():
+    """Сочный «хлюп» (мягкая мякоть)."""
+    n = int(0.35 * SR)
+    t = ts(0.35)
+    am = 0.5 + 0.5 * np.sin(2 * np.pi * 26 * t + 2 * np.sin(2 * np.pi * 5 * t))
+    y = band(0.35, 250, 1800) * am * env(n, 0.01, 0.1) + 0.3 * sweep(300, 140, 0.35) * env(n, 0.005, 0.08)
+    return norm(y, 0.7)
+
+
 SOUNDS = {
     'alarm': s_alarm, 'click': s_click, 'tick': s_tick, 'snooze': s_snooze, 'whoosh': s_whoosh,
     'whoosh_down': s_whoosh_down, 'rise': s_rise, 'thud': s_thud, 'pop': s_pop, 'psst': s_psst,
     'pour': s_pour, 'clink': s_clink, 'slurp': s_slurp, 'chime': s_chime, 'success': s_success,
     'sparkle': s_sparkle, 'swell': s_swell, 'bass': s_bass,
+    'drip': s_drip, 'splash': s_splash, 'slice': s_slice, 'squish': s_squish,
 }
 WITH_DUR = {'alarm', 'whoosh', 'whoosh_down', 'rise', 'pour', 'slurp', 'sparkle', 'swell'}
-REVERB = {'chime', 'success', 'sparkle', 'swell', 'clink', 'pop'}
+REVERB = {'chime', 'success', 'sparkle', 'swell', 'clink', 'pop', 'drip', 'splash'}
 
 
 # ------------------------------------------------------------------ музыка
