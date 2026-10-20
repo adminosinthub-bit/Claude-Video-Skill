@@ -13,9 +13,18 @@
  *     update(t) { can.rotation.y = t * .8; v.orbit({ target: [0, .9, 0], radius: 5.5, angle: 20 + t * 6, height: 1.4 }); v.render(t); } }
  *
  * API:
- *   E3D.view(el, {floor|bg, fov, exposure, tone:'neutral'|'aces'|'agx', env, key, fill, rim, shadows, shadowOpacity, bloom:{strength,radius,threshold}})
+ *   E3D.view(el, {floor|bg, fov, exposure, tone:'neutral'|'aces'|'agx', env, key, fill, rim, shadows, shadowOpacity, bloom:{strength,radius,threshold},
+ *                 quality:'draft'|'high'|'ultra', ao: true|{radius,intensity,thickness,samples}|false, shadowExtent: число|'auto', pixelRatio})
  *        → v.scene v.camera v.add(...) v.on(fn(t)) v.orbit({target,radius,angle,height,fov}) v.look(pos,target) v.render(t)
  *          v.fit(объекты, {angle, elev, pad}) → {target, radius, height}: камера сама кадрирует объекты (вертикаль учитывается)
+ *          v.fitShadow(объекты, {pad}) — «коробка» тени по объектам: та же карта теней ложится плотнее → чётче контактные тени
+ * Качество (по умолчанию 'high'; глобально — window.__E3D_OPTS = {quality, ao}, его ставят render.mjs/frame.mjs: --ultra, --draft3d, --ao, --no-ao):
+ *   draft — превью: без MSAA, тени 1024, геометрия ×0.6;   high — как раньше: MSAA 4, тени 2048
+ *   ultra — финал/4K: тени 4096 мягче и без «лестниц», AO (GTAO) в щелях и контактах, преломление в полном разрешении,
+ *           отражения 512, геометрия ×1.6, текстуры-надписи ×2. Уровень детализации берут объекты, созданные ПОСЛЕ view().
+ *   4K: рендер в devicePixelRatio (render.mjs --preset vertical-4k или --scale 2): вёрстка как в 1080p, пиксели ×2,
+ *       все цели постобработки (bloom/DOF/AO) — в реальных пикселях; bloom считается в «1080p-масштабе», чтобы вид не менялся.
+ *   E3D.seg(n) — число сегментов с учётом качества (для своих геометрий); E3D.quality() — имя текущего уровня.
  *   E3D.mat(kind, color, extra)  kind: clay plastic glossy paint metal chrome gold glass emissive matte basic
  *   Примитивы: box(w,h,d,{r}) sphere(r) capsule(r,len) cylinder(r,h) torus(R,r,{arc}) cone(r,h)  — опции {color, kind, mat}
  *   Объекты:   can({label,color}) bottle({label,liquid,fill}) phone({screen(ctx,W,H,t)}) mascot({color}) confetti(n,{at,origin})
@@ -36,6 +45,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { SimplexNoise } from 'three/addons/math/SimplexNoise.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 let rectReady = false;
 import opentype from 'opentype';
@@ -47,6 +58,18 @@ const col = (c) => new THREE.Color(c);
 const slug = (s) => (/[Ѐ-ӿ]/.test(s) ? String(s).toLowerCase() : String(s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')).replace(/&/g, 'and').replace(/\+/g, 'plus').replace(/[^\p{L}\p{N}]/gu, '');
 let seed = 1;
 const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+/* ------------------------------ уровни качества ------------------------------ */
+// msaa — сэмплы сглаживания; shadowSize/shadowRadius — карта теней и размытие края (в текселях); transmissionScale — разрешение
+// преломления; envSize — грань куба отражений; detail — множитель сегментов геометрии; texRes — множитель разрешения текстур-надписей
+const QUALITY = {
+  draft: { name: 'draft', msaa: 0, shadowSize: 1024, shadowRadius: 1, transmissionScale: 0.5, envSize: 128, detail: 0.6, texRes: 1, ao: false },
+  high: { name: 'high', msaa: 4, shadowSize: 2048, shadowRadius: 1, transmissionScale: 0.5, envSize: 256, detail: 1, texRes: 1, ao: false },
+  ultra: { name: 'ultra', msaa: 8, shadowSize: 4096, shadowRadius: 2.5, transmissionScale: 1, envSize: 512, detail: 1.6, texRes: 2, ao: true },
+};
+let Q = QUALITY[(window.__E3D_OPTS || {}).quality] || QUALITY.high; // текущий уровень: view() переключает его для объектов, созданных после
+export const seg = (n, min = 3) => Math.max(min, Math.round(n * Q.detail));
+export const quality = () => Q.name;
 
 /* ------------------------------ материалы ------------------------------ */
 // цвет по умолчанию у каждого материала свой (золото — золотое, хром — белый и т.д.)
@@ -97,7 +120,7 @@ function studioEnv(renderer, o = {}) {
   panel(6, 3, [6, 1, 8], 1.2, '#ffe9d6');       // заполняющий отражатель
   if (o.backdrop) panel(18, 6, [0, 2.5, -15], o.backdrop, o.backdropColor || warm); // задний фон-софтбокс: отражается в жидкости/полу при съёмке снизу
   if (o.beauty !== false) panel(9, 4, [1.5, 4.5, 13], o.beauty ?? 3.2, warm); // фронтальный «бьюти»-софтбокс над камерой: блики на мокрых/глянцевых поверхностях, смотрящих в кадр
-  const tex = new THREE.PMREMGenerator(renderer).fromScene(s, 0.02).texture;
+  const tex = new THREE.PMREMGenerator(renderer).fromScene(s, 0.02, 0.1, 100, { size: o.size || 256 }).texture;
   return tex;
 }
 
@@ -125,32 +148,100 @@ const GradeShader = {
       gl_FragColor = vec4(clamp(x, 0.0, 1.0), c.a); }`,
 };
 
+/* ------------------------------ ambient occlusion (GTAO) ------------------------------ */
+// затенение в щелях и местах контакта (между кубиками, под каплей, у пола). Отличия от стандартного GTAOPass:
+// шум денойзера — от сида (кадры одинаковы при любом запуске, без мерцания); G-буфер учитывает плоскости обрезки
+// (разрез манго) и двусторонние материалы; прозрачное (надписи, ловушка теней, material.userData.noAO) не затеняет
+class AOPass extends GTAOPass {
+  setSize(w, h) { const k = this.res || 1; super.setSize(Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k))); }
+  _generateNoise(size = 64) {
+    let s = 9; const sn = new SimplexNoise({ random: () => ((s = (s * 16807) % 2147483647) / 2147483647) });
+    const data = new Uint8Array(size * size * 4);
+    for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) {
+      const k = (i * size + j) * 4;
+      data[k] = (sn.noise(i, j) * 0.5 + 0.5) * 255; data[k + 1] = (sn.noise(i + size, j) * 0.5 + 0.5) * 255;
+      data[k + 2] = (sn.noise(i, j + size) * 0.5 + 0.5) * 255; data[k + 3] = (sn.noise(i + size, j + size) * 0.5 + 0.5) * 255;
+    }
+    const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.UnsignedByteType);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.needsUpdate = true;
+    return tex;
+  }
+  _overrideVisibility() {
+    super._overrideVisibility();
+    this._swapped = [];
+    this._normals = this._normals || new WeakMap();
+    this.scene.traverse((x) => {
+      if (!x.isMesh || !x.visible || Array.isArray(x.material)) return;
+      const m = x.material;
+      if (m.isShadowMaterial || (m.transparent && !m.transmission) || m.userData.noAO) { x.visible = false; this._visibilityCache.push(x); return; }
+      if ((m.clippingPlanes && m.clippingPlanes.length) || m.side !== THREE.FrontSide) {
+        let nm = this._normals.get(m);
+        if (!nm) { nm = new THREE.MeshNormalMaterial({ side: m.side, clippingPlanes: m.clippingPlanes, blending: THREE.NoBlending }); nm.allowOverride = false; this._normals.set(m, nm); }
+        this._swapped.push([x, m]); x.material = nm;
+      }
+    });
+  }
+  _restoreVisibility() {
+    super._restoreVisibility();
+    for (const [x, m] of this._swapped || []) x.material = m;
+    this._swapped = [];
+  }
+}
+
+// проходы, которые перерисовывают сцену подменным материалом (AO — нормали, DOF — глубина), не должны заново считать карты теней:
+// в кадре они уже посчитаны основным проходом, а повтор карты 4096² — это лишние секунды на программном WebGL
+const noShadowPass = (p) => {
+  const render = p.render.bind(p);
+  p.render = (renderer, ...a) => { const sm = renderer.shadowMap, au = sm.autoUpdate; sm.autoUpdate = false; render(renderer, ...a); sm.autoUpdate = au; };
+  return p;
+};
+
 /* ------------------------------ сцена ------------------------------ */
 export function view(el, o = {}) {
-  // глобальные переопределения качества (render.mjs --draft3d / замеры): window.__E3D_OPTS = {antialias, shadowSize, ...}
-  o = { ...o, ...(window.__E3D_OPTS || {}) };
+  // глобальные переопределения (render.mjs --ultra/--draft3d/--ao, замеры): window.__E3D_OPTS = {quality, ao, antialias, shadowSize, ...}
+  const G = window.__E3D_OPTS || {}, page = o;
+  o = { ...page, ...G };
+  const q = (Q = QUALITY[o.quality] || QUALITY.high);
+  // AO: параметры задаёт страница, глобальный флаг включает/выключает (объект — дополняет параметры); в черновике — выключен, если не включён явно
+  let ao = G.ao === false ? false : G.ao ? (typeof G.ao === 'object' ? { ...(typeof page.ao === 'object' ? page.ao : {}), ...G.ao } : page.ao || true) : (page.ao ?? q.ao);
+  if (q === QUALITY.draft && !G.ao) ao = false;
+  const aa = (o.antialias ?? true) && q.msaa > 0;
+  const post = !!(o.bloom || o.dof || o.grade || ao);
   const L = LIGHTS[o.light || 'studio'];
   const r = el.getBoundingClientRect();
   const W = Math.round(r.width || innerWidth), H = Math.round(r.height || innerHeight);
+  const pr = o.pixelRatio || window.devicePixelRatio || 1; // 4K: страница с deviceScaleFactor 2 → холст и все цели ×2
   const canvas = document.createElement('canvas');
   canvas.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;display:block';
   el.insertBefore(canvas, el.firstChild);
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: o.antialias ?? true, alpha: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(o.pixelRatio || 1);
+  // с постобработкой сглаживает цель композитора, а MSAA и глубина у самого холста — лишняя память (в 4K это сотни МБ на сцену)
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: aa && !post, depth: !post, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(pr);
   renderer.setSize(W, H, false);
   renderer.toneMapping = { neutral: THREE.NeutralToneMapping, aces: THREE.ACESFilmicToneMapping, agx: THREE.AgXToneMapping, none: THREE.NoToneMapping }[o.tone || 'neutral'];
   renderer.toneMappingExposure = o.exposure ?? 1;
   renderer.shadowMap.enabled = o.shadows !== false;
-  renderer.shadowMap.type = o.shadowType === 'pcf' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+  // PCF (r186): 5 сэмплов по диску Фогеля с поворотом по пикселю — мягкий край без «лестниц»; ширина края — shadow.radius
+  renderer.shadowMap.type = o.shadowType === 'vsm' ? THREE.VSMShadowMap : THREE.PCFShadowMap;
   renderer.localClippingEnabled = true; // разрезы объектов (clippingPlanes у материалов)
-  renderer.transmissionResolutionScale = o.transmissionScale ?? 0.5; // преломление (стекло, капли) — в половинном разрешении: почти не видно, а в разы быстрее
+  // преломление (стекло, капли) — доля разрешения вёрстки (CSS-пикселей): high — половина (почти не видно, а в разы быстрее), ultra — полное;
+  // в 4K (pr=2) не растёт вчетверо: искажённая картинка сквозь каплю не становится от этого детальнее
+  renderer.transmissionResolutionScale = (o.transmissionScale ?? q.transmissionScale) / pr;
 
   const scene = new THREE.Scene();
-  scene.environment = (o.env || L.env) === 'studio' ? studioEnv(renderer, { warm: L.warm, envBase: o.envBase, envTop: o.envTop, beauty: o.beauty, backdrop: o.backdrop, backdropColor: o.backdropColor }) : new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environment = (o.env || L.env) === 'studio' ? studioEnv(renderer, { warm: L.warm, envBase: o.envBase, envTop: o.envTop, beauty: o.beauty, backdrop: o.backdrop, backdropColor: o.backdropColor, size: q.envSize }) : new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04, 0.1, 100, { size: q.envSize }).texture;
   scene.environmentIntensity = o.envIntensity ?? L.envI;
   const camera = new THREE.PerspectiveCamera(o.fov ?? 30, W / H, 0.02, 400);
 
-  const dl = (c, i, p, cast) => { const d = new THREE.DirectionalLight(c, i); d.position.set(...p); if (cast) { d.castShadow = o.shadows !== false; d.shadow.mapSize.set(o.shadowSize ?? 2048, o.shadowSize ?? 2048); Object.assign(d.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 0.5, far: 40 }); d.shadow.bias = -0.0004; d.shadow.normalBias = 0.02; } scene.add(d, d.target); return d; };
+  const shadowSize = o.shadowSize ?? q.shadowSize;
+  // «коробка» теневой камеры: half — полуразмер (по умолчанию ±7 — вся студия); меньше коробка → те же текселы плотнее → резче контакт
+  const setShadowBox = (d, half, c = [0, 0, 0], dist = null) => {
+    if (dist) { const dir = d.position.clone().sub(d.target.position).normalize(); d.target.position.set(...c); d.position.set(...c).addScaledVector(dir, dist); }
+    Object.assign(d.shadow.camera, { left: -half, right: half, top: half, bottom: -half, near: 0.5, far: Math.max(40, (dist || 0) + half * 3) });
+    d.shadow.camera.updateProjectionMatrix();
+    d.shadow.normalBias = Math.max(0.006, 3 * (2 * half) / shadowSize); // ~3 текселя: без «акне» и без отрыва тени от предмета
+  };
+  const dl = (c, i, p, cast) => { const d = new THREE.DirectionalLight(c, i); d.position.set(...p); if (cast) { d.castShadow = o.shadows !== false; d.shadow.mapSize.set(shadowSize, shadowSize); d.shadow.radius = o.shadowSoftness ?? q.shadowRadius; d.shadow.bias = -0.0004; setShadowBox(d, typeof o.shadowExtent === 'number' ? o.shadowExtent : 7); } scene.add(d, d.target); return d; };
   // ключевой (с тенью), заполняющий (небо/земля), контровой — и второй контровой у product/dramatic
   const key = dl(o.keyColor || L.key[0], o.key ?? L.key[1], o.keyPos || L.key[2], true);
   const hemi = new THREE.HemisphereLight(L.fill[0], o.ground || L.fill[1], o.fill ?? L.fill[2]);
@@ -178,14 +269,33 @@ export function view(el, o = {}) {
     scene.add(sc);
   }
 
-  // постобработка: глубина резкости (dof), свечение бликов (bloom), цветокоррекция (grade)
-  let composer = null, bokeh = null, grade = null;
-  if (o.bloom || o.dof || o.grade) {
-    const rt = new THREE.WebGLRenderTarget(W, H, { samples: (o.antialias ?? true) ? 4 : 0, type: THREE.HalfFloatType });
+  // постобработка: AO (ao), глубина резкости (dof), свечение бликов (bloom), цветокоррекция (grade) — цели в реальных пикселях (W×pr);
+  // плавные эффекты (AO, ореол bloom) — в разрешении вёрстки: дешевле, а на глаз то же самое
+  let composer = null, bokeh = null, grade = null, gtao = null;
+  if (post) {
+    // в 4K (pr ≥ 2) пиксели и так вдвое мельче — хватает 2 сэмплов; 8 сэмплов на 2160×3840 в программном WebGL стоят минуты
+    const rt = new THREE.WebGLRenderTarget(W, H, { samples: aa ? Math.min(pr >= 2 ? 2 : q.msaa, renderer.capabilities.maxSamples) : 0, type: THREE.HalfFloatType });
     composer = new EffectComposer(renderer, rt);
+    // сцену RenderPass рисует в readBuffer (renderTarget2) — MSAA нужен только ему; второй буфер — без сэмплов (−4 × W×H×8 байт).
+    // Чтобы MSAA-буфер был readBuffer в начале каждого кадра, после кадра выравниваем чётность обменов (см. render)
+    composer.renderTarget1.samples = 0;
     composer.addPass(new RenderPass(scene, camera));
-    if (o.dof) { bokeh = new BokehPass(scene, camera, { focus: o.dof.focus ?? 6, aperture: o.dof.aperture ?? 0.004, maxblur: o.dof.maxblur ?? 0.012 }); composer.addPass(bokeh); }
-    if (o.bloom) composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), o.bloom.strength ?? 0.6, o.bloom.radius ?? 0.45, o.bloom.threshold ?? 0.85));
+    if (ao) {
+      const a = ao === true ? {} : ao;
+      gtao = new AOPass(scene, camera, W, H, undefined,
+        { radius: a.radius ?? 0.3, thickness: a.thickness ?? 0.6, distanceFallOff: a.falloff ?? 1, distanceExponent: a.exponent ?? 1.5, samples: a.samples ?? 16, scale: 1 },
+        { radius: 6, lumaPhi: 10, depthPhi: 2, normalPhi: 3, samples: 16, rings: 2 }); // денойз: радиус в пикселях AO-буфера
+      gtao.blendIntensity = a.intensity ?? 0.9;
+      gtao.res = a.res ?? 1 / pr; // AO плавное: в 4K считаем его в разрешении вёрстки — вчетверо дешевле, на глаз не отличить
+      composer.addPass(noShadowPass(gtao));
+    }
+    if (o.dof) { bokeh = new BokehPass(scene, camera, { focus: o.dof.focus ?? 6, aperture: o.dof.aperture ?? 0.004, maxblur: o.dof.maxblur ?? 0.012 }); composer.addPass(noShadowPass(bokeh)); }
+    if (o.bloom) {
+      const bp = new UnrealBloomPass(new THREE.Vector2(W, H), o.bloom.strength ?? 0.6, o.bloom.radius ?? 0.45, o.bloom.threshold ?? 0.85);
+      const size = bp.setSize.bind(bp); // ореол считается в «1080p-масштабе»: при pr=2 он не становится вдвое уже, а проход — вчетверо дороже
+      bp.setSize = (w, h) => size(Math.round(w / pr), Math.round(h / pr));
+      composer.addPass(bp);
+    }
     composer.addPass(new OutputPass());
     if (o.grade) {
       grade = new ShaderPass(GradeShader);
@@ -193,11 +303,25 @@ export function view(el, o = {}) {
       for (const [k, u] of [['contrast', 'uContrast'], ['saturation', 'uSat'], ['warmth', 'uWarm'], ['vignette', 'uVig'], ['grain', 'uGrain'], ['lift', 'uLift']]) if (g[k] !== undefined) grade.uniforms[u].value = g[k];
       composer.addPass(grade);
     }
+    composer.setSize(W, H); // EffectComposer сам умножит на pixelRatio рендерера
   }
+  const renderPost = () => { composer.render(); if (composer.readBuffer !== composer.renderTarget2) composer.swapBuffers(); };
+
+  // тень по объектам: центр и полуразмер коробки — по описанной сфере (вызывай в mount, пока объекты в исходном положении)
+  const fitShadow = (objs, { pad = 1.3 } = {}) => {
+    const b = new THREE.Box3();
+    [].concat(objs).forEach((x) => { x.updateMatrixWorld(true); b.expandByObject(x); });
+    if (b.isEmpty()) return;
+    const sp = b.getBoundingSphere(new THREE.Sphere());
+    setShadowBox(key, sp.radius * pad, [sp.center.x, sp.center.y, sp.center.z], 20);
+  };
+  // 'auto': после mount всех сцен (микрозадача) — по всем отбрасывающим тень мешам; детерминировано, т.к. не зависит от первого t
+  if (o.shadowExtent === 'auto') queueMicrotask(() => { const c = []; scene.traverse((x) => { if (x.isMesh && x.castShadow && !x.isInstancedMesh) c.push(x); }); if (c.length) fitShadow(c); });
 
   const ticks = [];
   const v = {
-    THREE, scene, camera, renderer, el, key, rim, rim2, hemi, bokeh, grade,
+    THREE, scene, camera, renderer, el, key, rim, rim2, hemi, bokeh, grade, gtao, composer, quality: q.name, pixelRatio: pr,
+    fitShadow(objs, opts) { fitShadow(objs, opts); return v; },
     add(...objs) { objs.forEach((x) => scene.add(x)); return objs[0]; },
     on(fn) { ticks.push(fn); return v; },
     // камера по орбите вокруг цели: angle — градусы вокруг вертикали, height — высота над целью
@@ -237,7 +361,7 @@ export function view(el, o = {}) {
       ticks.forEach((f) => f(t));
       scene.traverse((x) => { if (x.userData.tick) x.userData.tick(t); if (x.material && x.material.userData.time) x.material.userData.time.value = t; });
       if (grade) grade.uniforms.uTime.value = t;
-      if (composer) composer.render(); else renderer.render(scene, camera);
+      if (composer) renderPost(); else renderer.render(scene, camera);
     },
   };
   v.orbit();
@@ -263,6 +387,10 @@ float snoise(vec3 v){ const vec2 C=vec2(1.0/6.0,1.0/3.0); const vec4 D=vec4(0.0,
 float fbm(vec3 p){ float a=0.5, s=0.0; for(int i=0;i<4;i++){ s+=a*snoise(p); p=p*2.03+vec3(1.7,9.2,3.1); a*=0.5; } return s; }
 float fbm3(vec3 p){ float a=0.5, s=0.0; for(int i=0;i<3;i++){ s+=a*snoise(p); p=p*2.03+vec3(1.7,9.2,3.1); a*=0.5; } return s; } // дешевле: 3 октавы
 vec3 srgb(vec3 c){ return pow(c, vec3(2.2)); } // цвет «как в макете» (sRGB) → линейный для шейдера
+// антиалиасинг узора (только фрагментный шейдер): 1 — деталь частоты freq (шум от p*freq) крупнее пикселя, 0 — мельче (гасим, иначе рябь/муар в движении)
+float aaFade(vec3 p, float freq){ return 1.0 - smoothstep(0.35, 0.75, length(fwidth(p)) * freq); }
+float snoiseAA(vec3 p, float freq){ return snoise(p * freq) * aaFade(p, freq); }  // snoise(p*freq), гаснущий вдали
+float fbmAA(vec3 p){ float w=length(fwidth(p)), f=1.0, a=0.5, s=0.0; for(int i=0;i<4;i++){ s+=a*snoise(p)*(1.0-smoothstep(0.35,0.75,w*f)); p=p*2.03+vec3(1.7,9.2,3.1); f*=2.03; a*=0.5; } return s; } // fbm без «искр» мелких октав
 `;
 
 /* enhance(material, opts) — внедрить шейдерные эффекты в обычный материал Three.js (свет/тени/отражения сохраняются).
@@ -277,7 +405,10 @@ vec3 srgb(vec3 c){ return pow(c, vec3(2.2)); } // цвет «как в маке�
  *  rim:    {color, intensity, power} — мягкое свечение по контуру (бархат, кожица, «ореол»)
  *  space:  'object' (по умолчанию) | 'world'; scale — масштаб P; uniforms: {имя: значение}
  *  rest:   true — P берётся из атрибута aRest (vec3, «исходные» координаты вершины): узор не «плывёт», когда геометрию деформируют на CPU
- * У InstancedMesh можно задать атрибут aSeed (vec3) — каждый экземпляр получит свой узор. */
+ * У InstancedMesh можно задать атрибут aSeed (vec3) — каждый экземпляр получит свой узор.
+ * Мелкие детали без ряби (и в 1080p, и в 4K): высокочастотный шум умножай на aaFade(P, частота) — он гаснет, когда деталь
+ * становится мельче пикселя (объект отъехал, кадр уменьшен). Готовые варианты: snoiseAA(P, 52.0) вместо snoise(P*52.0),
+ * fbmAA(P*k) вместо fbm(P*k). Особенно важно для height/coat: рельеф мельче пикселя даёт «искрящиеся» блики. */
 export function enhance(m, o = {}) {
   const U = { uScale: { value: o.scale ?? 1 }, uBump: { value: o.bump ?? 0.0 }, uCoatBump: { value: o.coatBump ?? 0.0 }, uTime: { value: 0 } };
   if (o.sss) Object.assign(U, { uSssCol: { value: col(o.sss.color || '#ff8a00') }, uSssK: { value: o.sss.strength ?? 1 }, uSssP: { value: o.sss.power ?? 3 }, uSssD: { value: o.sss.distortion ?? 0.35 }, uSssA: { value: o.sss.ambient ?? 0.12 } });
@@ -353,22 +484,25 @@ export function contactShadow(w = 1.6, d = 1.2, opacity = 0.45) {
 }
 
 /* ------------------------------ примитивы ------------------------------ */
-export const box = (w = 1, h = 1, d = 1, o = {}) => mesh(new RoundedBoxGeometry(w, h, d, 6, o.r ?? Math.min(w, h, d) * 0.14), pick(o));
-export const sphere = (r = 0.5, o = {}) => mesh(new THREE.SphereGeometry(r, 64, 40), pick(o));
-export const capsule = (r = 0.2, len = 0.6, o = {}) => mesh(new THREE.CapsuleGeometry(r, len, 12, 32), pick(o));
-export const cylinder = (r = 0.5, h = 1, o = {}) => mesh(new THREE.CylinderGeometry(o.rt ?? r, r, h, 72), pick(o));
-export const torus = (R = 0.5, r = 0.15, o = {}) => mesh(new THREE.TorusGeometry(R, r, 32, 96, o.arc ?? Math.PI * 2), pick(o));
-export const cone = (r = 0.5, h = 1, o = {}) => mesh(new THREE.ConeGeometry(r, h, 72), pick(o));
+// число сегментов — через seg(): в ultra гуще (гладкий силуэт в 4K), в draft — реже
+export const box = (w = 1, h = 1, d = 1, o = {}) => mesh(new RoundedBoxGeometry(w, h, d, seg(6), o.r ?? Math.min(w, h, d) * 0.14), pick(o));
+export const sphere = (r = 0.5, o = {}) => mesh(new THREE.SphereGeometry(r, seg(64), seg(40)), pick(o));
+export const capsule = (r = 0.2, len = 0.6, o = {}) => mesh(new THREE.CapsuleGeometry(r, len, seg(12), seg(32)), pick(o));
+export const cylinder = (r = 0.5, h = 1, o = {}) => mesh(new THREE.CylinderGeometry(o.rt ?? r, r, h, seg(72)), pick(o));
+export const torus = (R = 0.5, r = 0.15, o = {}) => mesh(new THREE.TorusGeometry(R, r, seg(32), seg(96), o.arc ?? Math.PI * 2), pick(o));
+export const cone = (r = 0.5, h = 1, o = {}) => mesh(new THREE.ConeGeometry(r, h, seg(72)), pick(o));
 
 /* ------------------------------ текстуры с надписями (кириллица — через шрифты страницы) ------------------------------ */
-export function canvasTex(w, h, draw) {
+// рисуй в логических единицах w×h: в ultra холст в texRes раз плотнее (ctx уже масштабирован) — надписи чёткие и в 4K
+export function canvasTex(w, h, draw, res = Q.texRes) {
   const c = document.createElement('canvas');
-  c.width = w; c.height = h;
+  c.width = Math.round(w * res); c.height = Math.round(h * res);
   const ctx = c.getContext('2d');
+  ctx.scale(c.width / w, c.height / h);
   draw(ctx, w, h);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
+  tex.anisotropy = Q.detail > 1 ? 16 : 8;
   return { tex, ctx, canvas: c };
 }
 function fitFont(ctx, text, weight, maxW, maxPx) {
@@ -413,7 +547,7 @@ export function label(text, o = {}) {
 }
 
 /* ------------------------------ продукты ------------------------------ */
-const lathe = (pts, m, seg = 96) => mesh(new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), seg), m);
+const lathe = (pts, m, n = 96) => mesh(new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), seg(n)), m);
 
 // банка 0.33 л: высота 1.8, радиус 0.5; label — {title, sub, bg, ink, accent} или функция (ctx, W, H)
 export function can(o = {}) {
@@ -424,11 +558,11 @@ export function can(o = {}) {
   const { tex } = canvasTex(2048, 958, (ctx, W, H) => drawLabel(ctx, W, H, o.label || {}));
   tex.wrapS = THREE.RepeatWrapping;
   tex.offset.x = 0.5; // центр этикетки — к камере (+Z)
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.47, 128, 1, true),
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.47, seg(128), 1, true),
     new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.32, metalness: 0.15, clearcoat: 0.9, clearcoatRoughness: 0.1 }));
   body.position.y = 0.135 + 1.47 / 2;
   g.add(shade(body));
-  const tab = mesh(new RoundedBoxGeometry(0.17, 0.02, 0.27, 3, 0.008), alu);
+  const tab = mesh(new RoundedBoxGeometry(0.17, 0.02, 0.27, seg(3), 0.008), alu);
   tab.position.set(0, 1.8, 0.12);
   tab.rotation.x = -0.06;
   g.add(tab);
@@ -458,7 +592,7 @@ export function bottle(o = {}) {
   if (o.label) {
     const { tex } = canvasTex(2048, 1100, (ctx, W, H) => drawLabel(ctx, W, H, o.label));
     tex.wrapS = THREE.RepeatWrapping; tex.offset.x = 0.5;
-    const lb = new THREE.Mesh(new THREE.CylinderGeometry(0.425, 0.425, 0.62, 128, 1, true), new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.55 }));
+    const lb = new THREE.Mesh(new THREE.CylinderGeometry(0.425, 0.425, 0.62, seg(128), 1, true), new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.55 }));
     lb.position.y = 0.66;
     g.add(shade(lb));
   }
@@ -468,14 +602,14 @@ export function bottle(o = {}) {
 // телефон с «живым» экраном: screen(ctx, W, H, t) рисует интерфейс на каждом кадре
 export function phone(o = {}) {
   const g = new THREE.Group();
-  const frame = mesh(new RoundedBoxGeometry(0.84, 1.72, 0.09, 8, 0.1), mat('metal', o.color || '#1f2026', { roughness: 0.35 }));
+  const frame = mesh(new RoundedBoxGeometry(0.84, 1.72, 0.09, seg(8), 0.1), mat('metal', o.color || '#1f2026', { roughness: 0.35 }));
   g.add(frame);
   const W = 720, H = 1480;
   const c = canvasTex(W, H, () => {});
   const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.78 * H / W), new THREE.MeshBasicMaterial({ map: c.tex, toneMapped: false, transparent: true }));
   scr.position.z = 0.0465;
   g.add(scr);
-  const cam = mesh(new RoundedBoxGeometry(0.28, 0.28, 0.03, 4, 0.06), mat('metal', '#2a2b31'));
+  const cam = mesh(new RoundedBoxGeometry(0.28, 0.28, 0.03, seg(4), 0.06), mat('metal', '#2a2b31'));
   cam.position.set(-0.2, 0.62, -0.055);
   g.add(cam);
   const draw = (t) => {
@@ -498,12 +632,12 @@ export function phone(o = {}) {
 export function mascot(o = {}) {
   const g = new THREE.Group();
   const m = mat('clay', o.color || '#ffb347');
-  const body = mesh(new THREE.SphereGeometry(0.6, 64, 40), m);
+  const body = mesh(new THREE.SphereGeometry(0.6, seg(64), seg(40)), m);
   g.add(body);
   const petals = new THREE.Group();
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2;
-    const p = mesh(new THREE.CapsuleGeometry(0.14, 0.4, 10, 24), m);
+    const p = mesh(new THREE.CapsuleGeometry(0.14, 0.4, seg(10), seg(24)), m);
     p.position.set(Math.cos(a) * 0.86, Math.sin(a) * 0.86, -0.05);
     p.rotation.z = a - Math.PI / 2;
     petals.add(p);
@@ -511,11 +645,11 @@ export function mascot(o = {}) {
   g.add(petals);
   const face = new THREE.Group();
   const ink = mat('glossy', o.face || '#24160e');
-  const eyes = [-0.2, 0.2].map((x) => { const e = mesh(new THREE.SphereGeometry(0.085, 32, 20), ink); e.position.set(x, 0.1, 0.54); e.scale.set(1, 1.35, 0.6); face.add(e); return e; });
-  [-0.17, 0.23].forEach((x) => { const h = new THREE.Mesh(new THREE.SphereGeometry(0.024, 16, 10), mat('basic', '#ffffff')); h.position.set(x, 0.16, 0.6); face.add(h); });
-  const smile = mesh(new THREE.TorusGeometry(0.16, 0.03, 12, 40, Math.PI), ink);
+  const eyes = [-0.2, 0.2].map((x) => { const e = mesh(new THREE.SphereGeometry(0.085, seg(32), seg(20)), ink); e.position.set(x, 0.1, 0.54); e.scale.set(1, 1.35, 0.6); face.add(e); return e; });
+  [-0.17, 0.23].forEach((x) => { const h = new THREE.Mesh(new THREE.SphereGeometry(0.024, seg(16), seg(10)), mat('basic', '#ffffff')); h.position.set(x, 0.16, 0.6); face.add(h); });
+  const smile = mesh(new THREE.TorusGeometry(0.16, 0.03, seg(12), seg(40), Math.PI), ink);
   smile.position.set(0, -0.08, 0.56); smile.rotation.z = Math.PI;
-  const oMouth = mesh(new THREE.TorusGeometry(0.07, 0.028, 12, 32), ink);
+  const oMouth = mesh(new THREE.TorusGeometry(0.07, 0.028, seg(12), seg(32)), ink);
   oMouth.position.set(0, -0.16, 0.56); oMouth.visible = false;
   face.add(smile, oMouth);
   g.add(face);
@@ -579,7 +713,7 @@ export function extrudeSVG(svg, o = {}) {
   const depth = (o.depth ?? 0.25) / k, bevel = (o.bevel ?? 0.03) / k;
   const m = o.mat || mat(o.kind || 'plastic', o.color);
   const inner = new THREE.Group();
-  shapes.forEach((s) => inner.add(mesh(new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel * 0.8, bevelSegments: 4, curveSegments: 28 }), m)));
+  shapes.forEach((s) => inner.add(mesh(new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel * 0.8, bevelSegments: seg(4, 2), curveSegments: seg(28, 8) }), m)));
   inner.position.set(-c.x, -c.y, -depth / 2);
   const g = new THREE.Group();
   g.add(inner);
@@ -659,5 +793,5 @@ export function glb(url, o = {}) {
   return g;
 }
 
-export const E3D = { THREE, view, mat, shade, enhance, liquidMat, contactShadow, GLSL_NOISE, box, sphere, capsule, cylinder, torus, cone, can, bottle, phone, mascot, confetti, label, extrudeSVG, logo3D, logoTile3D, text3D, glb, canvasTex };
+export const E3D = { THREE, view, seg, quality, mat, shade, enhance, liquidMat, contactShadow, GLSL_NOISE, box, sphere, capsule, cylinder, torus, cone, can, bottle, phone, mascot, confetti, label, extrudeSVG, logo3D, logoTile3D, text3D, glb, canvasTex };
 window.E3D = E3D;

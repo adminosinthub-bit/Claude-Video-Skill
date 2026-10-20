@@ -18,49 +18,168 @@ const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 const sh = (o) => E3D.shade(o);
 
 /* ------------------------------ материалы манго ------------------------------ */
-// кожура: зелёный низ → жёлтый → красный «бочок», светлые точки-чечевички, лёгкий рельеф, глянец, просвет на контровом свете
+// Микродетали («4K»): всё мельче нескольких пикселей сглажено по fwidth — дальше деталь плавно заменяется своим средним
+// (нет ряби/муара в 1080p). Шум считается один раз в pre и переиспользуется в цвете, рельефе, лаке и шероховатости.
+const FOOD_GLSL = `
+// размер пикселя в единицах шума с координатой p
+float fdW(vec3 p) { return length(fwidth(p)); }
+// видимость детали: 1 — период крупнее пикселя, 0 — мельче (тогда деталь заменяют средним). fdA — для цвета;
+// fdB — для рельефа, строже: наклон рельефа берётся по квадам 2×2 пикселя, и мелочь даёт «ступеньки» в резких бликах
+float fdA(float w) { return 1.0 - smoothstep(0.15, 0.5, w); }
+float fdB(float w) { return 1.0 - smoothstep(0.06, 0.2, w); }
+float fdAA(vec3 p) { return fdA(fdW(p)); }
+float fdAAb(vec3 p) { return fdB(fdW(p)); }
+// порог с переходом шириной в пиксель
+float fdStep(float e, float x) { float w = fwidth(x) * 0.7 + 1e-4; return smoothstep(e - w, e + w, x); }
+// тонкая линия вдоль нуля поля d (полуширина w), f — размер пикселя в единицах d; тоньше пикселя — бледнеет, а не рвётся
+float fdLine(float d, float w, float f) { f = max(f, 1e-5); return (1.0 - smoothstep(max(w - 0.5 * f, 0.0), w + 0.5 * f, abs(d))) * min(1.0, 2.0 * w / f); }
+`;
+// дописать GLSL сразу после #include <chunk> (после enhance): свой лак/блеск/просвет по пикселю; ключ программы — с меткой
+function hook(m, tag, adds) {
+  const ob = m.onBeforeCompile, key = m.customProgramCacheKey();
+  m.onBeforeCompile = (s, r) => { ob(s, r); for (const [inc, code] of adds) s.fragmentShader = s.fragmentShader.replace(`#include <${inc}>`, `#include <${inc}>\n${code}`); };
+  m.customProgramCacheKey = () => key + '|' + tag;
+  return m;
+}
+// просвет по пикселю (fTr_ — доля, считается в pre): контровой свет проходит сквозь тонкие края и волокна
+const TRANSLUCENT = `#if NUM_DIR_LIGHTS > 0
+  for (int i = 0; i < NUM_DIR_LIGHTS; i++) { vec3 Ld = directionalLights[i].direction;
+    float s = pow(saturate(dot(geometryViewDir, -normalize(Ld + normal * 0.5))), 2.0);
+    reflectedLight.directDiffuse += uTrCol * directionalLights[i].color * s * fTr_ * diffuseColor.rgb; }
+  #endif`;
+
+// искры сока на макушках клеточек: маска по пикселю × узкий блик лака от каждого источника — блик «рассыпается» на капельки
+// без ступенек (рельефом такие мелкие искры не сделать: наклон считается по квадам 2×2)
+const GLINTS = `
+  #ifdef USE_CLEARCOAT
+  { float gm = smoothstep(0.5 + 0.2 * fn_, 0.85 + 0.1 * fn_, cnr_) * cA_ * wet_ * smoothstep(-0.2, 0.4, fm_); vec3 gs = vec3(0.0);
+    #if NUM_DIR_LIGHTS > 0
+    for (int i = 0; i < NUM_DIR_LIGHTS; i++) gs += directionalLights[i].color * pow(saturate(dot(clearcoatNormal, normalize(directionalLights[i].direction + geometryViewDir))), 90.0);
+    #endif
+    #if NUM_RECT_AREA_LIGHTS > 0
+    for (int i = 0; i < NUM_RECT_AREA_LIGHTS; i++) gs += rectAreaLights[i].color * 0.12 * pow(saturate(dot(clearcoatNormal, normalize(normalize(rectAreaLights[i].position + vViewPosition) + geometryViewDir))), 45.0);
+    #endif
+    reflectedLight.directSpecular += gs * gm * 0.7; }
+  #endif`;
+
+// мягкое «колено» для рассеянной части: пересвет не уводит оранжевый в розовый (тонмаппер белит пересвеченный красный,
+// синий растёт); оттенок сохраняется, блики (спекуляр, лак) идут поверх как есть
+const KNEE = `{ vec3 dd_ = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse; float pk_ = max(dd_.r, max(dd_.g, dd_.b));
+  if (pk_ > 0.7) { float k_ = (0.7 + 0.45 * (1.0 - exp(-(pk_ - 0.7) / 0.45))) / pk_; reflectedLight.directDiffuse *= k_; reflectedLight.indirectDiffuse *= k_; } }`;
+
+// кожура: зелёный низ → жёлтый → красный «бочок» крапом; чечевички (гуще у плеча) с микробугорком и ореолом без румянца;
+// восковой налёт пятнами (матовее, белесее, бархатный sheen) и потёртые глянцевые места; поры; у черенка — тёмное кольцо и следы сока.
+// stem: true — у целого плода (кольцо у черенка), false — для кусков кожуры без черенка
 export function skinMat(o = {}) {
-  const m = new THREE.MeshPhysicalMaterial({ roughness: 0.36, clearcoat: 0.6, clearcoatRoughness: 0.16, sheen: 0.25, sheenRoughness: 0.6, sheenColor: col('#fff1c8'), side: THREE.FrontSide, ...(o.extra || {}) });
-  return E3D.enhance(m, {
-    scale: 1, bump: o.bump ?? 0.0009, rest: !!o.rest,
-    uniforms: { uBlush: o.blush ?? 0.85, uRipe: o.ripe ?? 0.25 },
-    pre: 'float skN_ = fbm3(P * 2.2); float skD_ = smoothstep(0.80, 0.93, snoise(P * 52.0));',
+  const m = new THREE.MeshPhysicalMaterial({ roughness: 0.36, clearcoat: 0.6, clearcoatRoughness: 0.14, sheen: 0.4, sheenRoughness: 0.5, sheenColor: col('#fff3dc'), side: THREE.FrontSide, ...(o.extra || {}) });
+  E3D.enhance(m, {
+    scale: 1, bump: o.bump ?? 0.0009, rest: !!o.rest, glsl: FOOD_GLSL,
+    uniforms: { uBlush: o.blush ?? 0.85, uRipe: o.ripe ?? 0.25, uStem: o.stem ? 1 : 0 },
+    pre: `
+      float skN_ = fbm3(P * 2.2);                                            // крупные пятна цвета
+      float skM_ = snoise(P * vec3(6.0, 3.5, 6.0) + 3.1);                     // средний масштаб: налёт, потёртости, волнистость
+      vec3 lq_ = P * 58.0; float lw_ = fdW(lq_), lA_ = fdA(lw_); float ln_ = snoise(lq_);   // чечевички ~0.6–1 мм
+      float lth_ = mix(0.86, 0.68, smoothstep(0.2, 0.9, P.y)) - 0.05 * skN_; // у плеча гуще и крупнее
+      float skD_ = mix(0.03, fdStep(lth_, ln_), lA_);                         // светлая точка (вдали — её средняя доля)
+      float skHalo_ = mix(0.06, fdStep(lth_ - 0.17, ln_), lA_) - skD_;        // ореол: вокруг точки нет румянца
+      float skDome_ = smoothstep(lth_ - 0.05, lth_ + 0.16, ln_) * fdB(lw_);     // микробугорок
+      vec3 bq_ = P * vec3(32.0, 20.0, 32.0); float bs_ = snoise(bq_) * fdAA(bq_);   // крап румянца (чуть вытянут вдоль плода)
+      vec3 pq_ = P * 120.0; float pr_ = snoise(pq_) * fdAAb(pq_);             // поры / едва заметная «апельсиновая корка»
+      vec3 kq_ = P * 23.0 + 17.0; float fk_ = smoothstep(0.82, 0.94, snoise(kq_)) * fdAA(kq_);  // редкие бурые пятнышки
+      float bloom_ = smoothstep(-0.45, 0.4, skM_ + skN_ * 0.5);               // восковой налёт (1) / стёрт до глянца (0)
+      float sd_ = mix(9.0, length(P - vec3(0.03, 0.975, 0.0)), uStem);       // расстояние до черенка
+      float sap_ = 0.0;
+      if (uStem > 0.5 && P.y > 0.55) {                                         // подтёки сока от черенка вниз по плечу
+        vec2 ad_ = normalize(P.xz - vec2(0.03, 0.0) + 1e-4);
+        sap_ = smoothstep(0.5, 0.8, snoise(vec3(ad_ * 3.2, P.y * 0.9 + 4.0))) * smoothstep(0.55, 0.88, P.y) * smoothstep(0.06, 0.1, sd_) * smoothstep(0.45, 0.2, sd_);
+      }`,
     color: `
       float t = P.y, s = P.x; float n = skN_;
-      vec3 green = srgb(vec3(0.42,0.60,0.15)), yellow = srgb(vec3(0.99,0.76,0.13)), red = srgb(vec3(0.85,0.20,0.10));
-      vec3 c = mix(green, yellow, smoothstep(-0.95, 0.1, t + n*0.35 + s*0.3 + uRipe));
-      c = mix(c, red, uBlush * smoothstep(0.05, 0.85, t*0.55 + s*0.75 + n*0.45 + uRipe*0.3));
-      c = mix(c, srgb(vec3(0.98,0.92,0.66)), skD_ * 0.5);
+      vec3 green = srgb(vec3(0.42,0.60,0.15)), yellow = srgb(vec3(0.99,0.76,0.13)), red = srgb(vec3(0.84,0.19,0.09)), wine = srgb(vec3(0.56,0.09,0.06));
+      vec3 c = mix(green, yellow, smoothstep(-0.95, 0.1, t + n*0.35 + s*0.3 + uRipe + skM_*0.05));
+      float bf = t*0.55 + s*0.75 + n*0.45 + uRipe*0.3;                         // поле румянца
+      float bk = smoothstep(0.05, 0.85, bf + bs_ * 0.2 - skHalo_ * 0.3);      // край румянца — крапом, вокруг точек — светлее
+      c = mix(c, red, uBlush * bk);
+      c = mix(c, wine, uBlush * 0.45 * smoothstep(0.7, 1.3, bf + n*0.3 + bs_*0.1)); // тёмный винный центр румянца
+      c *= 0.96 + 0.06 * bs_;
+      vec3 lc = mix(srgb(vec3(0.90,0.88,0.52)), srgb(vec3(0.99,0.86,0.56)), bk); // чечевички: на румянце — кремовые и заметнее
+      c = mix(c, lc, skD_ * (0.42 + 0.3 * bk));
+      c = mix(c, vec3(dot(c, vec3(0.3,0.55,0.15))) * vec3(0.97,1.0,1.03), 0.09 * bloom_); // налёт чуть белесит и холодит
+      c = mix(c, srgb(vec3(0.42,0.27,0.08)), fk_ * 0.55);                      // пятнышки
+      c = mix(c, srgb(vec3(0.46,0.52,0.13)), uStem * 0.55 * smoothstep(0.17, 0.07, sd_));   // у черенка зеленее
+      c = mix(c, srgb(vec3(0.22,0.15,0.06)), 0.75 * smoothstep(0.074, 0.062, sd_) * smoothstep(0.042, 0.05, sd_)); // тёмное кольцо
+      c = mix(c, srgb(vec3(0.40,0.20,0.06)), sap_ * 0.35);                    // подсохший сок
       diffuseColor.rgb = c;`,
-    height: 'snoise(P * 14.0) * 0.6 + skD_ * 0.35',
+    height: 'skM_ * 0.35 + skDome_ * 0.45 + pr_ * 0.18 - fk_ * 0.2 + sap_ * 0.3 - uStem * 9.0 * smoothstep(0.13, 0.055, sd_)',
+    rough: 'roughnessFactor = roughness + 0.16 * bloom_ - 0.06 + 0.12 * skD_ - 0.12 * sap_;',
     sss: { color: '#ffb040', strength: 0.55, power: 3.5, ambient: 0.05 },
   });
+  // налёт: лак слабее и шире, бархат ярче; потёртости и сок — глянцевее
+  return hook(m, 'skin', [['lights_physical_fragment', `
+    #ifdef USE_CLEARCOAT
+      material.clearcoat *= mix(1.15, 0.5, bloom_) * (1.0 - 0.4 * skD_);
+      material.clearcoatRoughness = min(material.clearcoatRoughness + 0.12 * bloom_ + 0.1 * skD_ - 0.05 * sap_, 1.0);
+    #endif
+    #ifdef USE_SHEEN
+      material.sheenColor *= 0.35 + 1.1 * bloom_;
+    #endif`]]);
 }
 
-// мякоть: глубокий оранжевый к центру, светлее к краю, продольные волокна, бугристость;
-// сверху — плёнка сока с собственными пологими волнами (лак) → дробные влажные блики; сильный просвет на контровом свете
+// мякоть: глубокий оранжевый к центру, светлее к краю; тонкие нити-волокна вдоль плода (видны на просвет и в бликах),
+// клеточки-«пузырьки» сока (дробят блики на искры), пятна насыщенности; плёнка сока с микроволнами и подсохшие участки;
+// края светлее и просвечивают; у косточки — светлее и волокнистее. Синий канал почти ноль — мякоть не «розовеет».
 export function fleshMat(o = {}) {
   // база почти без спекуляра (иначе широкий блик от светлых панелей «белит» мякоть до розового), мокрые блики — от лака
-  const m = new THREE.MeshPhysicalMaterial({ roughness: 0.45, specularIntensity: 0.35, clearcoat: 1, clearcoatRoughness: 0.03, side: THREE.DoubleSide, ...(o.extra || {}) });
-  return E3D.enhance(m, {
-    scale: 1, bump: o.bump ?? 0.004, coatBump: o.wet ?? 0.014, seed: !!o.seed, rest: !!o.rest,
-    uniforms: { uC: new THREE.Vector2(...(o.center || [0, 0])), uRad: new THREE.Vector2(...(o.radius || [0.6, 0.9])), uSeedR: o.seedR ?? 0.0, uDeep: o.deep || '#ff8500', uLight: o.light || '#ffc42e' },
+  const m = new THREE.MeshPhysicalMaterial({ roughness: 0.45, specularIntensity: 0.25, clearcoat: 1, clearcoatRoughness: 0.03, side: THREE.DoubleSide, ...(o.extra || {}) });
+  E3D.enhance(m, {
+    scale: 1, bump: o.bump ?? 0.004, coatBump: o.wet ?? 0.014, seed: !!o.seed, rest: !!o.rest, glsl: FOOD_GLSL,
+    uniforms: { uC: new THREE.Vector2(...(o.center || [0, 0])), uRad: new THREE.Vector2(...(o.radius || [0.6, 0.9])), uSeedR: o.seedR ?? 0.0, uDeep: o.deep || '#ff8500', uLight: o.light || '#ffc42e', uTrCol: o.trColor || '#ffa62a' },
     pre: `vec2 fq_ = (vE3dP.xy - uC) / uRad; float fr_ = length(fq_);
-      float fib_ = fbm3(vec3(fq_.x * 15.0, fq_.y * 3.2, 4.0) + vE3dSeed * 5.0);
-      float fn_ = fbm3(vec3(fq_ * 3.0, 1.7) + vE3dSeed * 3.0);`,
+      float fn_ = fbm3(vec3(fq_ * 3.0, 1.7) + vE3dSeed * 3.0);                         // крупные пятна: насыщенность, влажность
+      float fm_ = snoise(vec3(fq_ * 7.0, 5.0) + vE3dSeed * 2.0);                       // средний масштаб: микроволны плёнки
+      // волокна: вдоль длинной оси, чуть волнистые; нить — ноль растянутого шума, сглаженный по пикселю
+      vec3 fa_ = vec3((vE3dP.x + fn_ * 0.006) * 110.0, vE3dP.y * 3.0, vE3dP.z * 110.0) + vE3dSeed * 5.0;   // тонкие, шаг ~0.6 мм
+      vec3 fb_ = fa_ * vec3(0.45, 1.3, 0.45) + 7.3;                                                         // пучки покрупнее
+      float f1_ = snoise(fa_), f2_ = snoise(fb_), w1_ = fdW(fa_), w2_ = fdW(fb_), fA1_ = fdA(w1_), fA2_ = fdA(w2_);
+      float sd_ = length(fq_ * vec2(1.6, 1.0)) + f1_ * 0.012 + fn_ * 0.04;               // косточка: вытянутая
+      float hasSeed_ = step(0.001, uSeedR);
+      float near_ = mix(1.0 - smoothstep(0.1, 0.8, fr_), smoothstep(uSeedR + 0.4, uSeedR + 0.02, sd_), hasSeed_); // «у косточки»
+      float th_ = (fdLine(f1_, 0.12, fwidth(f1_)) * fA1_ * 0.6 + fdLine(f2_, 0.14, fwidth(f2_)) * fA2_ * 0.45) * (0.5 + 0.6 * near_);
+      float fib_ = f1_ * fA1_ * 0.4 + f2_ * fA2_ * 0.6, fibB_ = f1_ * fdB(w1_) * 0.4 + f2_ * fdB(w2_) * 0.6;  // тон / рельеф
+      // клеточки сока: сеть стенок вокруг выпуклых ячеек (0 — стенка, 1 — центр)
+      vec3 cq_ = vec3(vE3dP.x * 55.0, vE3dP.y * 36.0, vE3dP.z * 55.0 + 3.0) + vE3dSeed * 9.0;   // ячейки ~1 мм, вытянуты вдоль волокон
+      float wc_ = fdW(cq_), cA_ = fdA(wc_), cB_ = fdB(wc_), cnr_ = snoise(cq_);
+      float cel_ = mix(0.6, smoothstep(0.0, 0.55, abs(cnr_)), cA_);
+      float wet_ = smoothstep(-0.4, 0.1, fn_ * 0.8 + fm_ * 0.35);                    // мокро (1) / подсохло (0)
+      float fTr_ = 0.3 * smoothstep(0.8, 0.98, fr_) + 0.06 * th_;                      // просвет: тонкий край и нити
+      float seedM_ = smoothstep(uSeedR + 0.06, uSeedR - 0.03, sd_) * hasSeed_;           // скорлупа косточки
+      float husk_ = fib_ * 1.4 + th_ * 0.8 - 0.3;                                       // скорлупа: грубые продольные волокна`,
     color: `
       vec3 deep = uDeep, light = uLight;                                                  // центр среза / край
-      vec3 c = mix(deep, light, clamp(smoothstep(0.0, 1.0, fr_) * 0.7 + fn_ * 0.25, 0.0, 1.0));
-      c *= 0.9 + 0.12 * fib_;
-      float sd_ = length(fq_ * vec2(1.6, 1.0)) + fib_ * 0.06 + fn_ * 0.04;                                           // косточка: вытянутая, волокнистая
-      c = mix(c, srgb(vec3(1.0, 0.86, 0.48)) * (0.82 + 0.25 * fib_), smoothstep(uSeedR + 0.06, uSeedR - 0.03, sd_) * step(0.001, uSeedR));
-      c = mix(c, srgb(vec3(0.78, 0.72, 0.20)), smoothstep(0.955, 0.99, fr_));                                      // кожица по краю
+      vec3 c = mix(deep, light, clamp(smoothstep(0.0, 1.0, fr_) * 0.7 + fn_ * 0.25 + fm_ * 0.05, 0.0, 1.0));
+      c *= vec3(1.0, 0.95 + 0.08 * fm_ + 0.04 * fn_, 1.0);                                // насыщенность: то краснее, то желтее
+      c *= 0.93 + 0.08 * fib_;
+      c = mix(c, light * vec3(1.0, 1.06, 0.5), th_ * 0.16 + hasSeed_ * near_ * 0.22);     // нити и зона у косточки — светлее и желтее
+      c *= 0.96 + 0.04 * cel_;                                                             // стенки клеточек чуть темнее
+      c = mix(c, srgb(vec3(1.0, 0.86, 0.5)) * (0.82 + 0.16 * husk_), seedM_);
+      c = mix(c, light * vec3(1.0, 1.06, 0.8), 0.3 * smoothstep(0.86, 0.95, fr_));       // светлый слой под кожицей
+      c = mix(c, srgb(vec3(0.78, 0.72, 0.20)), smoothstep(0.955, 0.99, fr_));             // кожица по краю
       diffuseColor.rgb = c;`,
-    height: 'fn_ * 0.6 + fib_ * 0.5',
-    coat: 'fbm3(vec3(fq_ * 1.8, 7.0) + vE3dSeed * 2.0) + 0.35 * snoise(vec3(fq_ * 6.0, 11.0))',
-    rough: 'roughnessFactor = mix(0.3, 0.6, smoothstep(-0.3, 0.5, fn_));',
+    height: 'fn_ * 0.6 + fibB_ * 0.15 + th_ * fdB(w1_) * 0.1 + (cel_ - 0.6) * 0.03 * cB_ + seedM_ * (fibB_ * 1.4 - 0.3) * 0.25',
+    coat: 'fn_ * 0.8 + fm_ * 0.25 + fibB_ * 0.04',
+    rough: 'roughnessFactor = mix(0.5, 0.34, wet_) + 0.05 * (1.0 - cel_);',
     sss: { color: o.sssColor || '#ff9a10', strength: o.sss ?? 0.75, power: 2.4, distortion: 0.4, ambient: 0.09 }, // сильнее — красный канал клиппится и мякоть «розовеет» при тонмаппинге
   });
+  // подсохшие места: лак тоньше и чуть матовее (не шире — широкий белый блик «розовит»); просвет краёв и нитей
+  return hook(m, 'flesh', [
+    ['lights_physical_fragment', `
+    #ifdef USE_CLEARCOAT
+      material.clearcoat *= mix(0.22, 1.0, wet_);
+      material.clearcoatRoughness = min(material.clearcoatRoughness + 0.1 * (1.0 - wet_), 1.0);
+    #endif`],
+    ['lights_fragment_end', TRANSLUCENT + GLINTS],
+    ['aomap_fragment', KNEE],
+  ]);
 }
 
 /* ------------------------------ форма манго ------------------------------ */
@@ -94,24 +213,88 @@ export function mangoSurface(lon, lat) {
   return { p: [p.x, p.y, p.z], n: [n.x, n.y, n.z] };
 }
 
+// черенок: утолщение-«пуговка» у плода, тонкая шейка, узелок; волокнистая кора вдоль, сверху — шрам среза (древесина, кольцо коры)
+const STEM_BEND = 0.9; // наклон черенка: x += k·y²
+function stemMesh() {
+  const prof = [[0.0, -0.03], [0.07, -0.03], [0.074, -0.008], [0.062, 0.01], [0.046, 0.028], [0.038, 0.055], [0.035, 0.095], [0.039, 0.118], [0.037, 0.135], [0.03, 0.146], [0.012, 0.149], [0.0, 0.149]];
+  const pts = new THREE.SplineCurve(prof.map(([r, y]) => new THREE.Vector2(r, y))).getPoints(48);
+  pts[0].set(0, -0.03); pts[pts.length - 1].set(0, 0.149);
+  const geo = new THREE.LatheGeometry(pts, 40);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) { const y = Math.max(0, p.getY(i)); p.setX(i, p.getX(i) + STEM_BEND * y * y * 0.5); }
+  geo.computeVertexNormals();
+  const tx = (STEM_BEND * 0.149 * 0.149 * 0.5).toFixed(4);
+  const m = E3D.enhance(new THREE.MeshPhysicalMaterial({ roughness: 0.72, sheen: 0.3, sheenRoughness: 0.6, sheenColor: col('#d8c8a8') }), {
+    bump: 0.0012, glsl: FOOD_GLSL,
+    pre: `float sy_ = vE3dP.y; vec2 sa_ = normalize(vE3dP.xz - vec2(${(STEM_BEND * 0.5).toFixed(3)} * max(sy_, 0.0) * max(sy_, 0.0), 0.0) + 1e-4);
+      vec3 sq_ = vec3(sa_ * 13.0, sy_ * 7.0); float s1_ = snoise(vec3(sa_ * 4.0, sy_ * 3.0)), s2_ = snoise(sq_) * fdAA(sq_);
+      float sf_ = s1_ * 0.55 + s2_ * 0.45;                                                // волокна коры вдоль черенка
+      float top_ = smoothstep(0.55, 0.85, N0.y) * smoothstep(0.125, 0.14, sy_);           // срез сверху
+      float rr_ = length(vE3dP.xz - vec2(${tx}, 0.0)) / 0.03;                              // 0 — центр среза, 1 — кора
+      float base_ = smoothstep(0.03, -0.01, sy_);                                         // «пуговка» у плода`,
+    color: `
+      vec3 c = mix(srgb(vec3(0.27, 0.18, 0.09)), srgb(vec3(0.46, 0.33, 0.17)), 0.5 + 0.5 * sf_);
+      c = mix(c, srgb(vec3(0.36, 0.38, 0.13)), base_ * 0.75);                              // у плода — зеленоватая
+      c = mix(c, c * 0.6, smoothstep(0.112, 0.118, sy_) * smoothstep(0.128, 0.122, sy_) * 0.6); // перетяжка-узелок
+      vec3 wood = mix(srgb(vec3(0.70, 0.58, 0.36)), srgb(vec3(0.52, 0.40, 0.22)), 0.5 + 0.5 * sin(rr_ * 14.0 + s1_ * 2.0) * 0.6);
+      wood = mix(wood, srgb(vec3(0.30, 0.20, 0.10)), smoothstep(0.75, 0.9, rr_) + smoothstep(0.2, 0.05, rr_) * 0.7); // кольцо коры, сердцевина
+      c = mix(c, wood, top_);
+      diffuseColor.rgb = c;`,
+    height: 'sf_ * 0.8 * (1.0 - top_) + top_ * sin(rr_ * 14.0) * 0.15 - base_ * s1_ * 0.3',
+    rough: 'roughnessFactor = mix(0.72, 0.85, top_) - 0.1 * base_;',
+  });
+  return sh(new THREE.Mesh(geo, m));
+}
+
+// лист: средняя жилка (выпуклая, светлая), вторичные жилки ёлочкой (продавлены, загибаются к верхушке), краевая жилка,
+// мелкая сетка третичных жилок; восковой глянец; неровный волнистый край; изнанка светлее и матовее
+const LEAF_W = (y) => 0.115 * Math.pow(Math.sin(Math.PI * Math.pow(Math.min(1, Math.max(0, y / 0.82)), 0.85)), 0.8) + 0.004;
+function leafMesh() {
+  const s = new THREE.Shape();
+  s.moveTo(0, 0); s.bezierCurveTo(0.12, 0.18, 0.14, 0.55, 0, 0.82); s.bezierCurveTo(-0.14, 0.55, -0.12, 0.18, 0, 0);
+  const geo = new THREE.ExtrudeGeometry(s, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.006, bevelSegments: 2, curveSegments: 48 });
+  const pp = geo.attributes.position;
+  for (let i = 0; i < pp.count; i++) {
+    const y = pp.getY(i), x = pp.getX(i), e = Math.min(1, Math.abs(x) / LEAF_W(y)), e2 = e * e;
+    pp.setX(i, x + Math.sign(x) * e2 * 0.0035 * Math.sin(y * 47 + (x > 0 ? 0 : 1.7)));                    // неровный край
+    pp.setZ(i, pp.getZ(i) + 0.22 * y * y - 0.35 * x * x + e2 * 0.012 * Math.sin(y * 23 + (x > 0 ? 0.4 : 2.1))); // изгиб и волна по краю
+  }
+  geo.computeVertexNormals();
+  const lm = E3D.enhance(new THREE.MeshPhysicalMaterial({ roughness: 0.42, clearcoat: 0.55, clearcoatRoughness: 0.12, side: THREE.DoubleSide }), {
+    bump: 0.0007, glsl: FOOD_GLSL,
+    pre: `vec2 lp_ = vE3dP.xy; float ly_ = clamp(lp_.y / 0.82, 0.0, 1.0);
+      float lw_ = 0.115 * pow(sin(3.14159 * pow(ly_, 0.85)), 0.8) + 0.004;              // полуширина листа на этой высоте
+      float lx_ = clamp(abs(lp_.x) / lw_, 0.0, 1.0);                                     // 0 — средняя жилка, 1 — край
+      float mid_ = fdLine(lp_.x, 0.0055 * (1.0 - 0.75 * ly_) + 0.0012, fwidth(lp_.x));
+      float vs_ = lp_.y - 0.62 * abs(lp_.x) - 4.5 * lp_.x * lp_.x;                       // вторичные: от средней к краю и вверх
+      float vk_ = vs_ / 0.033 + 0.5 * step(0.0, lp_.x) + 0.25 * sin(ly_ * 9.0);            // слева/справа — вразбежку
+      float sec_ = fdLine((fract(vk_) - 0.5) * 0.033, 0.0011 * (1.3 - 0.8 * lx_), fwidth(vs_)) * (1.0 - smoothstep(0.82, 0.96, lx_)) * smoothstep(0.03, 0.08, ly_);
+      float rim_ = fdLine(lx_ - 0.9, 0.012, fwidth(lx_)) * 0.6;                           // краевая жилка
+      vec3 tq_ = vec3(lp_ * 120.0, 1.0); float tn_ = snoise(tq_);
+      float ter_ = fdLine(tn_, 0.13, fwidth(tn_)) * fdAA(tq_);                             // сетка третичных жилок
+      float lv_ = snoise(vec3(lp_ * vec2(9.0, 5.0), 2.0));                                // неравномерность цвета`,
+    color: `
+      vec3 c = mix(srgb(vec3(0.06, 0.19, 0.04)), srgb(vec3(0.16, 0.33, 0.07)), clamp(0.4 + 0.3 * lv_ + 0.3 * (1.0 - ly_) * lx_, 0.0, 1.0));
+      c = mix(c, srgb(vec3(0.27, 0.44, 0.12)), sec_ * 0.6 + rim_ * 0.4);
+      c = mix(c, c * 1.3, ter_ * 0.22);
+      c = mix(c, srgb(vec3(0.55, 0.62, 0.28)), mid_ * 0.9);
+      c = mix(c, srgb(vec3(0.42, 0.46, 0.14)), smoothstep(0.93, 1.0, lx_) * 0.55);       // желтоватая кайма края
+      if (!gl_FrontFacing) c = mix(c, srgb(vec3(0.30, 0.44, 0.17)), 0.5);                // изнанка светлее
+      diffuseColor.rgb = c;`,
+    height: 'mid_ * 1.2 - sec_ * 0.7 - rim_ * 0.3 - ter_ * 0.2 + lv_ * 0.15',
+    rough: 'roughnessFactor = 0.4 + 0.12 * sec_ + 0.08 * ter_ + (gl_FrontFacing ? 0.0 : 0.2);',
+    sss: { color: '#9be34a', strength: 0.8, power: 2 },
+  });
+  return sh(new THREE.Mesh(geo, lm));
+}
+
 function stemAndLeaf(o = {}) {
   const g = new THREE.Group();
-  const stem = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.14, 16), E3D.mat('clay', '#5b3a1e')));
-  stem.position.set(0.03, 0.99 + 0.05, 0);
+  const stem = stemMesh();
+  stem.position.set(0.03, 0.975, 0);
   g.add(stem);
   if (o.leaf !== false) {
-    const s = new THREE.Shape();
-    s.moveTo(0, 0); s.bezierCurveTo(0.12, 0.18, 0.14, 0.55, 0, 0.82); s.bezierCurveTo(-0.14, 0.55, -0.12, 0.18, 0, 0);
-    const geo = new THREE.ExtrudeGeometry(s, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.006, bevelSegments: 2, curveSegments: 24 });
-    const pp = geo.attributes.position;
-    for (let i = 0; i < pp.count; i++) { const y = pp.getY(i), x = pp.getX(i); pp.setZ(i, pp.getZ(i) + 0.22 * y * y - 0.35 * x * x); } // изгиб листа
-    geo.computeVertexNormals();
-    const lm = E3D.enhance(new THREE.MeshPhysicalMaterial({ roughness: 0.35, clearcoat: 0.35, clearcoatRoughness: 0.3, side: THREE.DoubleSide }), {
-      color: ` float mid = smoothstep(0.012, 0.0, abs(vE3dP.x)); float vein = smoothstep(0.9, 1.0, sin(vE3dP.y*60.0 - abs(vE3dP.x)*80.0));
-        diffuseColor.rgb = mix(srgb(vec3(0.16,0.42,0.12)), srgb(vec3(0.55,0.75,0.30)), max(mid, vein*0.4));`,
-      sss: { color: '#9be34a', strength: 0.8, power: 2 },
-    });
-    const leaf = sh(new THREE.Mesh(geo, lm));
+    const leaf = leafMesh();
     leaf.position.set(0.04, 1.08, 0.02); leaf.rotation.set(-0.5, 0.3, -1.05);
     g.add(leaf);
   }
@@ -123,7 +306,7 @@ export function mango(o = {}) {
   const g = new THREE.Group();
   const inner = new THREE.Group();
   inner.position.y = MANGO_LIFT;
-  inner.add(sh(new THREE.Mesh(mangoGeometry(), o.skin || skinMat(o))));
+  inner.add(sh(new THREE.Mesh(mangoGeometry(), o.skin || skinMat({ stem: true, ...o }))));
   inner.add(stemAndLeaf(o));
   g.add(inner);
   g.userData.inner = inner;
@@ -174,7 +357,7 @@ export function mangoCut(o = {}) {
     const g = new THREE.Group();
     const inner = new THREE.Group();
     const local = new THREE.Plane(new V3(0, 0, side), -side * c);
-    const sm = o.skin ? o.skin.clone() : skinMat(o);
+    const sm = o.skin ? o.skin.clone() : skinMat({ stem: true, ...o });
     if (o.skin) { sm.onBeforeCompile = o.skin.onBeforeCompile; sm.customProgramCacheKey = o.skin.customProgramCacheKey; sm.userData = o.skin.userData; }
     sm.clippingPlanes = [local.clone()]; sm.clipShadows = true;
     const skin = sh(new THREE.Mesh(geo, sm));
@@ -388,10 +571,35 @@ export function hedgehog(o = {}) {
 }
 
 /* ------------------------------ капли ------------------------------ */
-// все капли — один InstancedMesh (материал сока: преломление + оранжевое поглощение). Каждая капля — функция f(t) → {p,s,dir}
+// сок в каплях — линза: сквозь каплю видна мякоть (поглощение слабое, толщина ≈ размер капли, иначе сок густеет до красного),
+// к краю капля глубже по цвету (длинный путь в соке) — читается объём; каустика — светлое пятно напротив блика;
+// тёплое свечение изнутри — капля «живая» и не темнеет на тёмном фоне
+export function juiceMat(color = '#ffa31a', o = {}) {
+  const m = new THREE.MeshPhysicalMaterial({ color: col(o.tint || '#fff0cc'), transmission: o.transmission ?? 0.88, thickness: o.thickness ?? 0.1, ior: 1.34, roughness: 0.02,
+    attenuationColor: col(color).lerp(col('#ffe08a'), 0.5), attenuationDistance: o.depth ?? 0.5, specularIntensity: 1, clearcoat: 1, clearcoatRoughness: 0.02 });
+  E3D.enhance(m, { uniforms: { uJc: color, uJk: o.glow ?? 1 }, sss: { color, strength: 1.2, power: 2.2, distortion: 0.3, ambient: 0.22 } });
+  return hook(m, 'juice', [['transmission_fragment', `
+    { float nv = saturate(dot(normal, geometryViewDir));
+      totalDiffuse *= mix(vec3(1.0), uJc * 0.85, pow(1.0 - nv, 1.6) * 0.85);              // край — глубже и темнее: объём линзы
+      // каустика: свет, собранный каплей, — светлое пятно внутри напротив блика (на ~половине радиуса, по проекции на экран)
+      vec2 nd_ = normal.xy; float rr_ = length(nd_), ring_ = exp(-pow((rr_ - 0.55) / 0.24, 2.0));
+      vec3 cc_ = mix(uJc, vec3(1.0, 0.85, 0.35), 0.5);                                 // золотистая, не белёсая
+      #if NUM_DIR_LIGHTS > 0
+      for (int i = 0; i < NUM_DIR_LIGHTS; i++) { vec2 ld = -directionalLights[i].direction.xy; float lp = length(ld);
+        float cau = smoothstep(0.35, 1.0, dot(nd_, ld) / max(rr_ * lp, 1e-4)) * ring_ * smoothstep(0.05, 0.4, lp);
+        totalDiffuse += cc_ * directionalLights[i].color * cau * 0.3 * uJk; }
+      #endif
+      #if NUM_RECT_AREA_LIGHTS > 0
+      for (int i = 0; i < NUM_RECT_AREA_LIGHTS; i++) { vec2 ld = -normalize(rectAreaLights[i].position + vViewPosition).xy; float lp = length(ld);
+        float cau = smoothstep(0.35, 1.0, dot(nd_, ld) / max(rr_ * lp, 1e-4)) * ring_ * smoothstep(0.05, 0.4, lp);
+        totalDiffuse += cc_ * rectAreaLights[i].color * cau * 0.035 * uJk; }
+      #endif
+      totalDiffuse += uJc * (0.035 + 0.05 * pow(1.0 - nv, 2.0)) * uJk;                    // тёплое свечение изнутри
+    }`]]);
+}
 export function drops(list, o = {}) {
   const geo = new THREE.SphereGeometry(1, 28, 20);
-  const im = new THREE.InstancedMesh(geo, o.mat || E3D.liquidMat(o.color || '#ffa31a', { depth: o.depth ?? 0.5, tint: '#ffd98a', transmission: 0.85 }), list.length);
+  const im = new THREE.InstancedMesh(geo, o.mat || juiceMat(o.color || '#ffa31a', { depth: o.depth ?? 0.5 }), list.length);
   im.castShadow = true;
   const dm = new THREE.Object3D(), Y = new V3(0, 1, 0), d = new V3();
   im.userData.tick = (t) => {
@@ -535,5 +743,5 @@ export function knife() {
   return g;
 }
 
-export const F = { skinMat, fleshMat, mango, mangoSurface, mangoCut, hedgehog, drops, spray, drip, bead, splash, pool, knife };
+export const F = { skinMat, fleshMat, juiceMat, mango, mangoSurface, mangoCut, hedgehog, drops, spray, drip, bead, splash, pool, knife };
 window.F = F;
