@@ -276,6 +276,7 @@ vec3 srgb(vec3 c){ return pow(c, vec3(2.2)); } // цвет «как в маке�
  *  sss:    {color, strength, power, distortion, ambient} — свет «просвечивает» сквозь объект от контровых источников
  *  rim:    {color, intensity, power} — мягкое свечение по контуру (бархат, кожица, «ореол»)
  *  space:  'object' (по умолчанию) | 'world'; scale — масштаб P; uniforms: {имя: значение}
+ *  rest:   true — P берётся из атрибута aRest (vec3, «исходные» координаты вершины): узор не «плывёт», когда геометрию деформируют на CPU
  * У InstancedMesh можно задать атрибут aSeed (vec3) — каждый экземпляр получит свой узор. */
 export function enhance(m, o = {}) {
   const U = { uScale: { value: o.scale ?? 1 }, uBump: { value: o.bump ?? 0.0 }, uCoatBump: { value: o.coatBump ?? 0.0 }, uTime: { value: 0 } };
@@ -284,16 +285,16 @@ export function enhance(m, o = {}) {
   for (const [k, v] of Object.entries(o.uniforms || {})) U[k] = { value: typeof v === 'string' && v.startsWith('#') ? col(v) : v };
   m.userData.time = U.uTime;
   m.userData.uniforms = U;
-  const key = JSON.stringify([o.pre, o.color, o.height, o.rough, o.coat, o.glsl, o.post, !!o.sss, !!o.rim, o.space, !!o.seed, Object.keys(o.uniforms || {})]);
+  const key = JSON.stringify([o.pre, o.color, o.height, o.rough, o.coat, o.glsl, o.post, !!o.sss, !!o.rim, o.space, !!o.seed, !!o.rest, Object.keys(o.uniforms || {})]);
   m.customProgramCacheKey = () => key;
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     const ty = (v) => (typeof v === 'number' ? 'float' : (typeof v === 'string' || v.isColor || v.isVector3) ? 'vec3' : v.isVector2 ? 'vec2' : v.isVector4 ? 'vec4' : 'float');
     const decl = Object.entries(o.uniforms || {}).map(([k, v]) => (Array.isArray(v) ? `uniform ${ty(v[0])} ${k}[${v.length}];` : `uniform ${ty(v)} ${k};`)).join('\n');
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vE3dP; varying vec3 vE3dSeed; varying vec3 vE3dN;\n#ifdef E3D_SEED\nattribute vec3 aSeed;\n#endif')
+      .replace('#include <common>', `#include <common>\nvarying vec3 vE3dP; varying vec3 vE3dSeed; varying vec3 vE3dN;\n#ifdef E3D_SEED\nattribute vec3 aSeed;\n#endif\n${o.rest ? 'attribute vec3 aRest;' : ''}`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-        ${o.space === 'world' ? `#ifdef USE_INSTANCING\n vE3dP = (modelMatrix * instanceMatrix * vec4(position,1.0)).xyz;\n#else\n vE3dP = (modelMatrix * vec4(position,1.0)).xyz;\n#endif` : 'vE3dP = position;'}
+        ${o.rest ? 'vE3dP = aRest;' : o.space === 'world' ? `#ifdef USE_INSTANCING\n vE3dP = (modelMatrix * instanceMatrix * vec4(position,1.0)).xyz;\n#else\n vE3dP = (modelMatrix * vec4(position,1.0)).xyz;\n#endif` : 'vE3dP = position;'}
         vE3dN = normal; vE3dSeed = vec3(0.0);
         #ifdef E3D_SEED
         vE3dSeed = aSeed;

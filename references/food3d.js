@@ -23,7 +23,7 @@ const sh = (o) => E3D.shade(o);
 export function skinMat(o = {}) {
   const m = new THREE.MeshPhysicalMaterial({ roughness: 0.36, clearcoat: 0.6, clearcoatRoughness: 0.16, sheen: 0.25, sheenRoughness: 0.6, sheenColor: col('#fff1c8'), side: THREE.FrontSide, ...(o.extra || {}) });
   return E3D.enhance(m, {
-    scale: 1, bump: o.bump ?? 0.0009,
+    scale: 1, bump: o.bump ?? 0.0009, rest: !!o.rest,
     uniforms: { uBlush: o.blush ?? 0.85, uRipe: o.ripe ?? 0.25 },
     pre: 'float skN_ = fbm3(P * 2.2); float skD_ = smoothstep(0.80, 0.93, snoise(P * 52.0));',
     color: `
@@ -44,7 +44,7 @@ export function fleshMat(o = {}) {
   // база почти без спекуляра (иначе широкий блик от светлых панелей «белит» мякоть до розового), мокрые блики — от лака
   const m = new THREE.MeshPhysicalMaterial({ roughness: 0.45, specularIntensity: 0.35, clearcoat: 1, clearcoatRoughness: 0.03, side: THREE.DoubleSide, ...(o.extra || {}) });
   return E3D.enhance(m, {
-    scale: 1, bump: o.bump ?? 0.004, coatBump: o.wet ?? 0.014, seed: !!o.seed,
+    scale: 1, bump: o.bump ?? 0.004, coatBump: o.wet ?? 0.014, seed: !!o.seed, rest: !!o.rest,
     uniforms: { uC: new THREE.Vector2(...(o.center || [0, 0])), uRad: new THREE.Vector2(...(o.radius || [0.6, 0.9])), uSeedR: o.seedR ?? 0.0, uDeep: o.deep || '#ff8500', uLight: o.light || '#ffc42e' },
     pre: `vec2 fq_ = (vE3dP.xy - uC) / uRad; float fr_ = length(fq_);
       float fib_ = fbm3(vec3(fq_.x * 15.0, fq_.y * 3.2, 4.0) + vE3dSeed * 5.0);
