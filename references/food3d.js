@@ -133,7 +133,8 @@ export function fleshMat(o = {}) {
   const m = new THREE.MeshPhysicalMaterial({ roughness: 0.45, specularIntensity: 0.25, clearcoat: 1, clearcoatRoughness: 0.03, side: THREE.DoubleSide, ...(o.extra || {}) });
   E3D.enhance(m, {
     scale: 1, bump: o.bump ?? 0.004, coatBump: o.wet ?? 0.014, seed: !!o.seed, rest: !!o.rest, glsl: FOOD_GLSL,
-    uniforms: { uC: new THREE.Vector2(...(o.center || [0, 0])), uRad: new THREE.Vector2(...(o.radius || [0.6, 0.9])), uSeedR: o.seedR ?? 0.0, uDeep: o.deep || '#ff8500', uLight: o.light || '#ffc42e', uTrCol: o.trColor || '#ffa62a' },
+    uniforms: { uC: new THREE.Vector2(...(o.center || [0, 0])), uRad: new THREE.Vector2(...(o.radius || [0.6, 0.9])), uSeedR: o.seedR ?? 0.0, uDeep: o.deep || '#ff8500', uLight: o.light || '#ffc42e', uTrCol: o.trColor || '#ffa62a',
+      uDepthK: o.depthTint ?? 0, uTopCol: o.top || '#ffcf3f', uGroove: o.groove || '#f37f0c' },
     pre: `vec2 fq_ = (vE3dP.xy - uC) / uRad; float fr_ = length(fq_);
       float fn_ = fbm3(vec3(fq_ * 3.0, 1.7) + vE3dSeed * 3.0);                         // крупные пятна: насыщенность, влажность
       float fm_ = snoise(vec3(fq_ * 7.0, 5.0) + vE3dSeed * 2.0);                       // средний масштаб: микроволны плёнки
@@ -157,6 +158,10 @@ export function fleshMat(o = {}) {
     color: `
       vec3 deep = uDeep, light = uLight;                                                  // центр среза / край
       vec3 c = mix(deep, light, clamp(smoothstep(0.0, 1.0, fr_) * 0.7 + fn_ * 0.25 + fm_ * 0.05, 0.0, 1.0));
+      c = mix(c, light * vec3(1.0, 1.04, 0.85), smoothstep(0.5, 1.0, fr_) * 0.3 + smoothstep(0.2, 0.7, fn_) * 0.18); // золотистые разводы к краю, не однотонно
+      // «ёжик» (rest-координаты: z = 0 — бывший срез, ниже — глубина): верхушки золотисто-жёлтые, в глубину щелей — насыщенно-оранжевые
+      float dz_ = clamp(-vE3dP.z / 0.24, 0.0, 1.0);
+      c = mix(c, mix(uTopCol, uGroove, smoothstep(0.0, 1.0, dz_)) * (0.93 + 0.12 * fn_ + 0.04 * fm_), uDepthK);
       c *= vec3(1.0, 0.95 + 0.08 * fm_ + 0.04 * fn_, 1.0);                                // насыщенность: то краснее, то желтее
       c *= 0.93 + 0.08 * fib_;
       c = mix(c, light * vec3(1.0, 1.06, 0.5), th_ * 0.16 + hasSeed_ * near_ * 0.22);     // нити и зона у косточки — светлее и желтее
@@ -408,12 +413,12 @@ function cheekHeight(c) {
 
 export function hedgehog(o = {}) {
   const cz = o.cut ?? 0.17, sec = section(mangoGeometry(), cz), hm = cheekHeight(cz), { cx, cy } = sec;
-  const step = o.step ?? 0.21, kerf = o.kerf ?? 0.003, sink = 0.035, bevel = o.bevel ?? 0.02, bulge = o.bulge ?? 0;
-  const dome = o.dome ?? 0.7, tilt = o.tilt ?? 0.6, skinT = 0.014; // высота купола (доля толщины), доля наклона «чаши», толщина кожуры
+  const step = o.step ?? 0.235, kerf = o.kerf ?? 0.003, sink = 0.035, bevel = o.bevel ?? 0.02, bulge = o.bulge ?? 0;
+  const dome = o.dome ?? 0.42, tilt = o.tilt ?? 0.42, skinT = 0.014; // высота купола (доля толщины), доля наклона «чаши», толщина кожуры
   const h = (x, y) => hm(x + cx, y + cy); // локальные координаты: центр среза в (0, 0)
   const Rof = (x, y) => { const k = ((Math.atan2(y, x) + Math.PI) / (2 * Math.PI)) * sec.N, k0 = Math.floor(k), f = k - k0; return sec.R[k0 % sec.N] * (1 - f) + sec.R[(k0 + 1) % sec.N] * f; };
   // сетка ножа: чуть повёрнута и сдвинута, линии слегка «гуляют» (рука не идеальна)
-  const ga = o.gridAngle ?? 0.07, ca = Math.cos(ga), sa = Math.sin(ga), ox = step * 0.31, oy = step * 0.47;
+  const ga = o.gridAngle ?? 0.62, ca = Math.cos(ga), sa = Math.sin(ga), ox = step * 0.31, oy = step * 0.47;
   const toPlane = (gx, gy) => {
     const x = gx * ca - gy * sa + ox, y = gx * sa + gy * ca + oy;
     return [x + 0.006 * Math.sin(y * 7.3 + 1.1) + 0.003 * Math.sin(y * 17.0), y + 0.006 * Math.sin(x * 6.1 + 2.3) + 0.003 * Math.sin(x * 15.0 + 0.7)];
@@ -475,7 +480,7 @@ export function hedgehog(o = {}) {
   geo.setAttribute('position', new THREE.BufferAttribute(P, 3));
   geo.setAttribute('aRest', new THREE.Float32BufferAttribute(rest, 3));
   geo.setIndex(idx);
-  const fm = o.flesh || fleshMat({ center: [cx, cy], radius: [sec.rx, sec.ry], rest: true, bump: 0.003, wet: 0.01, deep: o.deep || '#ff9400', light: o.light || '#ffbf1a', extra: { specularIntensity: 0.4, clearcoat: 0.85 } });
+  const fm = o.flesh || fleshMat({ center: [cx, cy], radius: [sec.rx, sec.ry], rest: true, bump: 0.003, wet: 0.0035, deep: o.deep || '#ffa21a', light: o.light || '#ffcc33', depthTint: o.depthTint ?? 0.8, extra: { specularIntensity: 0.4, clearcoat: 0.85 } });
   const flesh = sh(new THREE.Mesh(geo, fm));
   const g = new THREE.Group();
   g.add(flesh);
