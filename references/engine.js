@@ -19,8 +19,11 @@
  *     trans: 'fade'|'up'|'left'|'zoom'|'circle'|'wipe'|'none', // как сцена входит
  *     cam: [1, 1.08],         // плавный наезд камеры на сцену (масштаб начало→конец)
  *     update(lt, $, p) {}     // lt — секунды от начала сцены, $ — querySelector внутри сцены, p = lt/dur
- *   }]
+ *     sfx: [[0.5, 'pop'], [1.2, 'pour', {dur: 2, gain: .7, pan: -.3}]]  // звуки по времени сцены (scripts/sfx.py --list)
+ *   }],
+ *   music: { style: 'lofi', from: 'scene:2+0.3', drums: 'scene:4+1.2', bpm: 86, gain: 0.5 }  // фоновая музыка
  * })
+ * Звук собирает render.mjs автоматически (python3 + numpy); отключить: --no-sfx.
  */
 (function () {
   const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -35,6 +38,9 @@
   const smooth = (x) => x * x * (3 - 2 * x);
   // count: число, плавно бегущее от a до b за отрезок [t0,t1]
   const count = (a, b, t, t0, t1) => Math.round(lerp(a, b, eo(seg(t, t0, t1))));
+  // mix: плавный переход между цветами '#rrggbb' (k от 0 до 1)
+  const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  const mix = (a, b, k) => { const x = hex(a), y = hex(b); k = cl(k); return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * k)).join(',')})`; };
   const type = (s, t, a, b) => s.slice(0, Math.floor(seg(t, a, b) * s.length));
   // pop: масштаб с «пружинкой» от 0 до 1 за d секунд, начиная с a
   const pop = (t, a, d = 0.45) => (t < a ? 0 : eb(seg(t, a, a + d)));
@@ -106,6 +112,19 @@
     const total = acc;
     window.__total = total;
 
+    // звук: события сцен в абсолютном времени + музыка → window.__AUDIO (его читает render.mjs)
+    const abs = (v) => {
+      if (typeof v === 'number') return v;
+      const m = String(v).match(/^scene:(\d+)([+-][\d.]+)?$/);
+      return m ? scenes[+m[1]].start + (m[2] ? parseFloat(m[2]) : 0) : 0;
+    };
+    const cues = [];
+    scenes.forEach((s) => (s.sfx || []).forEach(([t, type, o]) => cues.push({ t: +(s.start + t).toFixed(3), type, ...(o || {}) })));
+    window.__AUDIO = (cues.length || cfg.music) ? {
+      duration: total, cues,
+      music: cfg.music ? { ...cfg.music, from: abs(cfg.music.from || 0), drums: cfg.music.drums === undefined ? null : abs(cfg.music.drums) } : null,
+    } : null;
+
     let prog = null, bar = null, segs = [];
     if (cfg.progress !== false) {
       prog = document.createElement('div'); prog.id = 'prog'; stage.appendChild(prog);
@@ -169,5 +188,5 @@
     window.__setTime(0);
   }
 
-  window.E = { run, cl, seg, eo, ei, eio, eb, lerp, type, pop, set, spring, smooth, count };
+  window.E = { run, cl, seg, eo, ei, eio, eb, lerp, type, pop, set, spring, smooth, count, mix };
 })();

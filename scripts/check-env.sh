@@ -10,4 +10,5 @@ if node -e "require('playwright')" 2>/dev/null || node -e "import('playwright')"
 else
   echo "НЕТ playwright (npm i -g playwright или npm i playwright в папке навыка)"; ok=0
 fi
+if python3 -c "import numpy" 2>/dev/null; then echo "OK  numpy (звук)"; else echo "--  numpy нет: ролики соберутся без звука (pip install numpy)"; fi
 exit $((1-ok))

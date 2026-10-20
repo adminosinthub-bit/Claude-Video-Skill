@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Зарница — Утро (max)</title>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script><script src="brew.js"></script>
+<style>
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;background:radial-gradient(ellipse at 50% 45%,transparent 58%,rgba(0,0,0,.2) 100%)}
+.kick{position:absolute;left:0;right:0;top:9vw;text-align:center;font-size:3.8vw;font-weight:800;letter-spacing:.22em;text-transform:uppercase;opacity:.6}
+.star{position:absolute;width:1vw;height:1vw;border-radius:50%;background:#fff}
+.arc{position:absolute;top:31vw;width:12vw;height:20vw;border:1vw solid #ff6a3d;border-radius:50%}
+.puff{position:absolute;width:7vw;height:7vw;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,1),rgba(196,210,226,.75) 38%,rgba(196,210,226,0) 70%)}
+.drop{position:absolute;width:2.6vw;height:3.6vw;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:#8fd3ff}
+.card{position:absolute;left:7vw;right:7vw;height:36vw;background:#fff;border-radius:6vw;box-shadow:0 1.4vw 0 #e2cdb2,0 4vw 10vw rgba(90,60,30,.16);display:flex;align-items:center;gap:5vw;padding:0 6vw;color:#2b1a12}
+.card h3{font-size:5.6vw;font-weight:900;letter-spacing:-.02em;line-height:1.1}.card p{font-size:3.9vw;font-weight:600;opacity:.6;margin-top:1.4vw}
+.stamp{position:absolute;font-weight:900;text-transform:uppercase;letter-spacing:.04em;border:1.1vw solid currentColor;border-radius:3vw;padding:1.6vw 4.4vw}
+</style></head><body><script>
+const {seg,eo,pop,set,spring,lerp,cl,type,count,mix}=E;
+const SUN_PALE='#e9dbb6', SUN='#ffb347', SUN_HOT='#ff8a1f', INK='#2b1a12', CREAM='#fff7ec';
+const paint=(root,c)=>root.querySelectorAll('.petals rect, svg.spark > circle').forEach(e=>e.setAttribute('fill',c));
+const rays=(id,op=.28)=>`<div class="abs" id="${id}" style="left:-50vw;top:-10vw;width:200vw;height:200vw;border-radius:50%;background:repeating-conic-gradient(rgba(255,255,255,${op}) 0 7deg,transparent 7deg 20deg)"></div>`;
+const STARS=Array.from({length:26},(_,i)=>[(i*37+11)%96+2,(i*53+7)%86+3,.6+((i*7)%5)/5]);
+
+/* ---------- 1. Будильник ---------- */
+const s1={dur:4.6,bg:'linear-gradient(180deg,#0b1030 0%,#1b2357 62%,#2a2f6b 100%)',ink:'#fff',hl:'#ff6a3d',hlInk:'#fff',cam:[1,1.05],trans:'none',
+ cap:'Будильник. *Ещё пять минут…*',capAt:.6,
+ sfx:[[0.2,'alarm',{dur:1.4,gain:.5}],[1.7,'snooze',{gain:.8}],[2.4,'alarm',{dur:.9,gain:.55}],[3.4,'snooze',{gain:.8}]],
+ html:`<div class="kick" style="color:#fff">Понедельник</div>`+STARS.map(s=>`<i class="star" style="left:${s[0]}vw;top:${s[1]}vw;transform:scale(${s[2]})"></i>`).join('')+
+  `<div class="abs" style="left:78vw;top:15vw;width:13vw;height:13vw;border-radius:50%;box-shadow:inset -3.4vw 1.2vw 0 0 #f4e9c8"></div>
+  <div class="arc" id="aL" style="left:6vw;border-color:transparent transparent transparent #ff6a3d"></div><div class="arc" id="aR" style="right:6vw;border-color:transparent #ff6a3d transparent transparent"></div>
+  <div class="abs" id="pn" style="left:16vw;top:24vw;width:68vw;height:32vw;border-radius:6vw;background:#0d0f1f;box-shadow:0 0 0 .5vw #2f3570,0 4vw 10vw rgba(0,0,0,.5);display:grid;place-items:center"><div id="ck" style="font:900 23vw/1 Inter,system-ui,sans-serif;letter-spacing:-.04em;color:#ff6a3d;text-shadow:0 0 3vw rgba(255,106,61,.8);font-variant-numeric:tabular-nums">07:00</div></div>
+  <div class="abs" id="bt" style="left:25vw;top:60vw;width:50vw;height:11vw;border-radius:6vw;background:rgba(255,255,255,.12);border:.4vw solid rgba(255,255,255,.3);display:grid;place-items:center;color:#fff;font-size:4.4vw;font-weight:800">Отложить · 10 мин</div>
+  <div class="abs" style="left:20vw;top:98vw;width:60vw;height:20vw;border-radius:8vw;background:#e7eaf6;box-shadow:inset 0 -2vw 0 #c9cfe8"></div>
+  <div class="abs" id="sp" style="left:33vw;top:79vw">${P.spark(34,SUN_PALE)}</div>
+  <div class="abs" style="left:-10vw;right:-10vw;top:112vw;height:80vw;border-radius:40vw 40vw 0 0;background:repeating-linear-gradient(90deg,#3b4fa0 0 9vw,#3548936e 9vw 18vw),#3b4fa0;box-shadow:0 -1vw 0 #5165b8"></div>`+
+  ['Z','z','z'].map((z,i)=>`<div class="abs zz" style="left:${64+i*5}vw;top:${84-i*7}vw;font-size:${9-i*1.8}vw;font-weight:900;color:#c9d2ff;opacity:0">${z}</div>`).join('')+
+  `<div class="abs" id="tc" style="left:0;top:0;width:100vw;height:170vw;z-index:20">${P.tapHTML()}</div>`,
+ update(t,$,p,$$){ $$('.star').forEach((e,i)=>e.style.opacity=.35+.65*Math.abs(Math.sin(t*1.7+i)));
+  const ring=(t>.2&&t<1.65)||(t>2.4&&t<3.35); const sh=ring?Math.sin(t*70)*.7:0;
+  set($('#pn'),{x:sh,r:ring?Math.sin(t*55)*1.2:0}); $('#ck').textContent=t<1.7?'07:00':t<3.4?'07:10':'07:20';
+  $('#ck').style.opacity=ring?(.75+.25*Math.sin(t*25)):1;
+  ['#aL','#aR'].forEach((id,i)=>{const k=(t*2.2)%1; $(id).style.opacity=ring?(1-k):0; $(id).style.transform=`scale(${.7+k*.6}) translateX(${(i?1:-1)*k*3}vw)`;});
+  const pr=(t>1.7&&t<1.85)||(t>3.4&&t<3.55); set($('#bt'),{s:pr?.94:1}); $('#bt').style.background=pr?'rgba(255,255,255,.3)':'rgba(255,255,255,.12)';
+  set($('#sp'),{y:Math.sin(t*1.6)*.8}); P.sparkAct($('#sp'),{spin:t*4,blink:.08,mood:ring?'flat':'smile',dy:3});
+  $$('.zz').forEach((e,i)=>{const k=((t*.45+i*.33)%1); e.style.opacity=Math.sin(k*Math.PI)*.85*(ring?.3:1); e.style.transform=`translate(${k*5}vw,${-k*12}vw)`;});
+  P.touch($('#tc'),t,[[1.2,72,150],[1.7,50,65],[2.2,74,150],[2.9,72,150],[3.4,50,65],[3.95,74,150]],[1.7,3.4]); }};
+
+/* ---------- 2. Паника ---------- */
+const DROPS=[[-14,-26],[16,-30],[-20,-14],[22,-12]];
+const s2={dur:3.0,bg:'linear-gradient(180deg,#3a1636,#b8352a)',ink:'#fff',hl:'#ffd23f',hlInk:INK,trans:'none',
+ cap:'Опаздываешь. *Варить кофе* некогда.',capAt:.5,
+ sfx:[[0,'bass',{gain:.9}],[0.3,'pop'],[0.9,'whoosh',{dur:.4,gain:.45}],[1.5,'tick',{gain:.8}],[1.8,'tick',{gain:.8}],[2.1,'tick',{gain:.8}],[2.4,'tick',{gain:.8}]],
+ html:`<div class="abs" id="fl" style="inset:0;background:#fff"></div><div class="abs" id="ck" style="left:0;right:0;top:16vw;text-align:center;font:900 30vw/1 Inter,system-ui,sans-serif;letter-spacing:-.05em;color:#ff5a3c;text-shadow:0 0 4vw rgba(255,90,60,.6);font-variant-numeric:tabular-nums">07:20</div>
+  <div class="stamp" id="st" style="left:18vw;top:50vw;color:#ffd23f;font-size:7.4vw">Опаздываешь!</div>
+  <div class="abs" id="sp" style="left:32vw;top:68vw">${P.spark(36,SUN_PALE)}</div>`+DROPS.map((d,i)=>`<i class="drop" id="d${i}" style="left:49vw;top:80vw"></i>`).join('')+
+  `<div class="abs" id="cd" style="left:9vw;right:9vw;top:112vw;height:16vw;border-radius:5vw;background:rgba(0,0,0,.28);display:flex;align-items:center;gap:3.4vw;padding:0 5vw;color:#fff;font-size:5vw;font-weight:800">${P.icon('clock','#fff',7)}<span id="ct" style="position:relative">Сварить кофе — 15 мин<i id="ln" style="position:absolute;left:0;top:50%;height:.9vw;width:0;background:#ffd23f;border-radius:1vw"></i></span></div>`,
+ update(t,$,p,$$){ $('#fl').style.opacity=1-eo(seg(t,0,.25)); set($('#ck'),{s:1+.05*Math.sin(t*12),x:Math.sin(t*60)*.4});
+  const s=spring((t-.3)/.4); set($('#st'),{o:cl(s*3),s:1.8-.8*s,r:-8});
+  const j=spring(t/.5); set($('#sp'),{y:(1-j)*20-Math.abs(Math.sin(t*9))*2,x:Math.sin(t*40)*.8}); P.sparkAct($('#sp'),{spin:t*120,mood:'o',blink:1,dy:-1});
+  DROPS.forEach((d,i)=>{const k=((t*1.3+i*.25)%1); set($('#d'+i),{x:d[0]*k,y:d[1]*k+40*k*k,o:1-k});});
+  const c=spring((t-.9)/.45); set($('#cd'),{o:cl(c*2),y:(1-c)*8}); $('#ln').style.width=(100*eo(seg(t,1.5,2.0)))+'%'; $('#ct').style.opacity=1-.4*eo(seg(t,1.5,2.0)); }};
+
+/* ---------- 3. Банка ---------- */
+const s3={dur:3.6,bg:SUN,ink:INK,hl:INK,hlInk:SUN,trans:'circle',
+ cap:'Знакомьтесь: *Зарница*',capAt:1.2,
+ sfx:[[0.05,'whoosh_down',{dur:.5,gain:.55}],[0.55,'thud',{gain:.9}],[0.8,'sparkle',{dur:.8,gain:.45}],[1.0,'chime',{gain:.45}]],
+ html:rays('ry')+`<div class="abs" id="sh" style="left:30vw;top:93vw;width:40vw;height:6vw;border-radius:50%;background:rgba(80,40,0,.3)"></div>`+B.can(34,'cn','left:33vw;top:28vw;transform-origin:50% 100%')+
+  `<div class="abs" id="t" style="left:0;right:0;top:106vw;text-align:center;font-size:17vw;font-weight:900;letter-spacing:-.04em;color:${INK}">ЗАРНИЦА</div><div class="abs" id="s" style="left:0;right:0;top:127vw;text-align:center;font-size:5vw;font-weight:800;letter-spacing:.16em;color:${INK};opacity:.7">COLD BREW В БАНКЕ</div>
+  <div class="abs" id="sp" style="left:-6vw;top:66vw">${P.spark(24,SUN_PALE)}</div>`,
+ update(t,$){ set($('#ry'),{r:t*14}); const f=E.ei(seg(t,0,.55)); const land=t>=.55; const b=land?spring((t-.55)/.5):0;
+  const sq=land?Math.max(0,1-(t-.55)/.18):0; $('#cn').style.transform=`translateY(${land?(1-b)*-4:(-110+110*f)}vw) scale(${1+.1*sq},${1-.12*sq}) rotate(${Math.sin(t*2)*1.2}deg)`;
+  set($('#sh'),{s:.3+.7*f,o:.3+.7*f}); const a=spring((t-.7)/.5); set($('#t'),{o:cl(a*3),s:1.25-.25*a}); set($('#s'),{o:eo(seg(t,1.1,1.6))*.7});
+  set($('#sp'),{x:eo(seg(t,.9,1.4))*6}); P.sparkAct($('#sp'),{spin:t*10,dx:3,blink:t<.6?.1:P.blink(t),mood:t<1.3?'o':'smile'}); }};
+
+/* ---------- 4. Открыть и налить ---------- */
+const CAN={x:56,y:16,w:26}; const CX=CAN.x+CAN.w/2, CY=CAN.y+CAN.w*1.95/2;
+const s4={dur:5.6,bg:'linear-gradient(180deg,#fff3df,#ffd9a8)',ink:INK,hl:INK,hlInk:SUN,trans:'wipe',
+ cap:'Открыл. Налил. *Холодный* кофе готов.',capAt:2.0,
+ sfx:[[0.58,'click',{gain:.7}],[0.62,'psst',{gain:.8}],[1.7,'pour',{dur:2.3,gain:.75}],[1.8,'clink',{gain:.55,pan:-.2}],[2.7,'clink',{gain:.45,pan:.2}],[4.3,'pop',{gain:.6}]],
+ html:`<div class="kick" style="color:${INK}">Две секунды на приготовление</div>`+B.can(CAN.w,'cn',`left:${CAN.x}vw;top:${CAN.y}vw`)+
+  Array.from({length:9},(_,i)=>`<i class="puff" id="pf${i}" style="left:${CX-3.5}vw;top:${CAN.y-1}vw;opacity:0"></i>`).join('')+
+  `<div class="abs" id="sr" style="left:47.4vw;top:56vw;width:1.8vw;height:0;border-radius:1vw;background:linear-gradient(90deg,#3a1f0d,#6b3d1c,#3a1f0d)"></div>`+B.glass(40,'gl','left:28vw;top:80vw')+
+  `<div class="abs" id="sp" style="left:72vw;top:100vw">${P.spark(24,SUN_PALE)}</div>
+  <div class="abs" id="tc" style="left:0;top:0;width:100vw;height:170vw;z-index:20">${P.tapHTML()}</div>`,
+ update(t,$,p,$$){ const tilt=eo(seg(t,1.0,1.75))*(1-eo(seg(t,4.0,4.6))); const k=spring(t/.5);
+  set($('#cn'),{o:cl(k*2),y:(1-k)*-10,r:-125*tilt});
+  $$('.puff').forEach((e,i)=>{const q=seg(t,.65+i*.04,1.7+i*.05); e.style.opacity=q>0&&q<1?(1-q)*.85:0; e.style.transform=`translate(${Math.sin(i*2.3)*8*q}vw,${-q*20}vw) scale(${.4+2.2*q})`;});
+  const fill=eo(seg(t,1.75,3.9)); const pouring=t>1.68&&t<3.95; const surf=80+50-50*.78*fill;
+  $('#sr').style.height=pouring?(surf-56)+'vw':'0'; $('#sr').style.opacity=pouring?1:0;
+  B.fillGlass($('#gl'),fill,t); set($('#gl'),{o:eo(seg(t,0,.4)),s:1+.02*Math.sin(t*3)*fill});
+  set($('#sp'),{s:spring((t-.3)/.5),y:Math.sin(t*2.4)*.8}); P.sparkAct($('#sp'),{spin:t*12,dx:-3,dy:pouring?3:-1,blink:P.blink(t+.7),mood:pouring?'o':'smile'});
+  P.touch($('#tc'),t,[[.15,80,150],[.58,CX,CAN.y+3],[1.0,86,150]],[.58]); }};
+
+/* ---------- 5. Глоток → рассвет ---------- */
+const BIRDS=[[0,40,1],[8,48,.8],[-6,52,.7]];
+const s5={dur:5.6,bg:'#2a2350',ink:'#fff',hl:INK,hlInk:SUN,trans:'none',
+ cap:'Один глоток — и *солнце встало*',capAt:1.6,
+ sfx:[[0.3,'slurp',{dur:1.1,gain:.7}],[1.5,'rise',{dur:1.2,gain:.4}],[1.6,'swell',{dur:2.8,gain:.6}],[3.3,'sparkle',{dur:1,gain:.5}],[3.8,'chime',{gain:.45}]],
+ html:`<div class="abs" id="sky" style="inset:0"></div><div class="abs" id="gw" style="left:0;top:0;width:110vw;height:110vw;margin:-55vw 0 0 -55vw;border-radius:50%;background:radial-gradient(circle,rgba(255,200,90,.85),rgba(255,160,60,.35) 35%,rgba(255,140,40,0) 68%)"></div>
+  <div class="abs" id="rw" style="left:0;top:0;width:220vw;height:220vw;margin:-110vw 0 0 -110vw;border-radius:50%;background:repeating-conic-gradient(rgba(255,240,200,.35) 0 6deg,transparent 6deg 18deg)"></div>
+  <div class="abs" id="sp" style="left:30vw;top:64vw">${P.spark(40,SUN_PALE)}</div>`+
+  BIRDS.map((b,i)=>`<svg class="abs bd" style="left:0;top:${b[1]}vw;overflow:visible" width="9vw" height="4vw" viewBox="0 0 8 4"><path d="M0 2 Q2 0 4 2 Q6 0 8 2" stroke="#2b1a12" stroke-width=".7" fill="none" stroke-linecap="round"/></svg>`).join('')+
+  `<svg class="abs" style="left:0;bottom:0" width="100vw" height="62vw" viewBox="0 0 100 62" preserveAspectRatio="none"><path id="h1" d="M0 26 Q22 8 48 22 T100 16 L100 62 L0 62Z"/><path id="h2" d="M0 40 Q30 26 62 38 T100 34 L100 62 L0 62Z"/></svg>
+  <div class="abs" id="st" style="left:51.2vw;top:86vw;width:1.8vw;height:26vw;border-radius:1vw;background:repeating-linear-gradient(180deg,#fff 0 2.4vw,#ff6a3d 2.4vw 4.8vw);transform:rotate(6deg);transform-origin:50% 0"></div>`+B.glass(30,'gl','left:37vw;top:100vw')+
+  `<div class="abs" id="ck" style="right:6vw;top:7vw;background:rgba(255,255,255,.18);color:#fff;font-size:4.4vw;font-weight:900;padding:1.4vw 3.4vw;border-radius:4vw;font-variant-numeric:tabular-nums">07:21</div>`,
+ update(t,$,p,$$){ const k=eo(seg(t,1.4,4.4));
+  $('#sky').style.background=`linear-gradient(180deg,${mix('#2a2350','#7fc8ff',k)},${mix('#7a3a6a','#ffd9a0',k)} 70%,${mix('#ff8a5c','#fff1c9',k)})`;
+  $('#h1').setAttribute('fill',mix('#1d2a3f','#7cc26a',k)); $('#h2').setAttribute('fill',mix('#141c2c','#4f9c50',k));
+  const sip=eo(seg(t,.3,1.4)); B.fillGlass($('#gl'),.78*(1-sip)+.08,t);
+  const out=eo(seg(t,1.4,2.0)); set($('#gl'),{y:out*50,o:1-out}); set($('#st'),{y:out*50,o:1-out,r:6});
+  const rise=eo(seg(t,1.6,3.9)); const cx=50, cy=84-44*rise;
+  $('#sp').style.transform=`translate(0,${-44*rise}vw) scale(${1+.3*rise})`; paint($('#sp'),k<.5?mix(SUN_PALE,SUN,k*2):mix(SUN,SUN_HOT,(k-.5)*2));
+  P.sparkAct($('#sp'),{spin:t*(20+120*seg(t,1.6,2.6)*(1-seg(t,3.4,4.4)))+t*10,blink:t<1.4?.4:P.blink(t),mood:t<1.4?'o':'smile'});
+  set($('#gw'),{x:cx,y:cy,s:.3+1.1*rise,o:.2+.8*rise}); set($('#rw'),{x:cx,y:cy,r:t*10,o:eo(seg(t,2.4,3.6))});
+  $$('.bd').forEach((e,i)=>{const b=BIRDS[i];const q=seg(t,2.6+i*.15,5.6); e.style.opacity=q>0?1:0; e.style.transform=`translateX(${-12+b[0]+q*120}vw) scale(${b[2]},${b[2]*(.6+.4*Math.abs(Math.sin(t*9+i)))})`;});
+  $('#ck').textContent='07:2'+(1+Math.round(2*eo(seg(t,.5,4)))); }};
+
+/* ---------- 6. Почему работает ---------- */
+const bean=`<svg width="11vw" height="11vw" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="7" ry="10" fill="#5a3217" transform="rotate(25 12 12)"/><path d="M8 4 Q14 12 10 20" stroke="#2b1608" stroke-width="1.6" fill="none" transform="rotate(25 12 12)"/></svg>`;
+const water=`<svg width="10vw" height="11vw" viewBox="0 0 24 26"><path d="M12 1 C12 1 3 12 3 17 a9 9 0 0 0 18 0 C21 12 12 1 12 1Z" fill="#5aa9f0"/><path d="M8 16 a4 4 0 0 0 3 5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/></svg>`;
+const s6={dur:6.0,bg:CREAM,ink:INK,hl:INK,hlInk:SUN,trans:'circle',
+ cap:'Сделано медленно — *пьётся легко*',capAt:.6,
+ sfx:[[0.2,'pop'],[0.5,'tick'],[0.8,'tick'],[1.1,'tick'],[1.4,'tick'],[1.7,'chime',{gain:.35}],[2.0,'pop'],[2.3,'whoosh_down',{dur:.5,gain:.4}],[3.8,'pop'],[4.3,'sparkle',{dur:.7,gain:.4}]],
+ html:`<div class="kick" style="color:${INK}">Почему это работает</div>
+  <div class="card" id="c1" style="top:20vw"><svg width="24vw" height="24vw" viewBox="0 0 100 100" style="flex:none"><circle cx="50" cy="50" r="40" stroke="#f3e4d0" stroke-width="11" fill="none"/><circle id="rg" cx="50" cy="50" r="40" stroke="#5aa9f0" stroke-width="11" fill="none" stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="251.3" stroke-dashoffset="251.3"/><text id="rt" x="50" y="58" text-anchor="middle" font-size="26" font-weight="900" fill="#2b1a12" font-family="Inter,sans-serif">0ч</text></svg><div><h3>12 часов на холоде</h3><p>медленная экстракция</p></div></div>
+  <div class="card" id="c2" style="top:61vw"><div style="flex:none;width:24vw"><div style="font-size:3.4vw;font-weight:800;opacity:.55">горечь</div><div style="height:4vw;border-radius:2vw;background:#f3e4d0;margin-top:1.4vw;overflow:hidden"><div style="height:100%;width:82%;background:#c7b19a"></div></div><div style="height:4vw;border-radius:2vw;background:#f3e4d0;margin-top:1.6vw;overflow:hidden"><div id="bb" style="height:100%;width:82%;background:#ff7a2f"></div></div><div id="bv" style="font-size:5.4vw;font-weight:900;color:#ff7a2f;margin-top:1.2vw">82%</div></div><div><h3>Без горечи</h3><p>шоколад, орех, цитрус</p></div></div>
+  <div class="card" id="c3" style="top:102vw"><div style="flex:none;display:flex;align-items:center;gap:1.2vw;font-size:7vw;font-weight:900;color:#d9660f"><span class="fx">${bean}</span><span class="fx">+</span><span class="fx">${water}</span></div><div><h3>Только кофе и вода</h3><p>ничего лишнего</p></div></div>`,
+ update(t,$,p,$$){ [['#c1',.2],['#c2',2.0],['#c3',3.8]].forEach(([id,a])=>{const k=spring((t-a)/.55); set($(id),{o:cl(k*3),y:(1-k)*10,s:.92+.08*k});});
+  const r=eo(seg(t,.4,1.7)); $('#rg').style.strokeDashoffset=251.3*(1-r); $('#rt').textContent=Math.round(12*r)+'ч';
+  const b=eo(seg(t,2.3,3.3)); const v=Math.round(lerp(82,14,b)); $('#bb').style.width=v+'%'; $('#bv').textContent=v+'%';
+  $$('.fx').forEach((e,i)=>set(e,{s:spring((t-4.0-i*.18)/.4)})); }};
+
+/* ---------- 7. Успел ---------- */
+const s7={dur:3.4,bg:SUN,ink:INK,hl:INK,hlInk:SUN,trans:'zoom',
+ cap:'07:25. *Успел.*',capAt:.8,
+ sfx:[[0.2,'success',{gain:.7}],[0.45,'pop'],[0.6,'sparkle',{dur:1,gain:.5}]],
+ html:rays('ry',.32)+`<div class="abs" id="ck" style="left:0;right:0;top:18vw;text-align:center;font:900 28vw/1 Inter,system-ui,sans-serif;letter-spacing:-.05em;color:${INK};font-variant-numeric:tabular-nums">07:25</div>
+  <div class="stamp" id="st" style="left:24vw;top:50vw;color:#1f7a3a;font-size:9vw;background:rgba(255,255,255,.5);display:flex;align-items:center;gap:2.4vw">${P.icon('check','#1f7a3a',9)}Успел!</div>
+  <div class="abs" id="sp" style="left:30vw;top:72vw">${P.spark(40,SUN_HOT)}</div>`+B.can(15,'cn','left:74vw;top:96vw')+`<div id="cfw" class="abs" style="inset:0;z-index:80">${P.confetti(80,9,['#ff7a2f','#fff7ec','#2b1a12','#ffd23f','#1f7a3a'])}</div>`,
+ update(t,$){ set($('#ry'),{r:t*16}); set($('#ck'),{s:.9+.1*spring(t/.4)}); const s=spring((t-.35)/.4); set($('#st'),{o:cl(s*3),s:1.7-.7*s,r:-7});
+  set($('#sp'),{y:-Math.abs(Math.sin(t*5.2))*5}); P.sparkAct($('#sp'),{spin:t*90,blink:P.blink(t),mood:'smile'}); paint($('#sp'),SUN_HOT);
+  set($('#cn'),{s:spring((t-.3)/.5),r:12+Math.sin(t*4)*3}); P.cfUpdate($('#cfw'),t-.45,50,78); }};
+
+/* ---------- 8. Финал ---------- */
+const s8={dur:4.6,bg:'#1c120c',ink:'#f3e4d0',hl:'#ff7a2f',hlInk:'#1c120c',trans:'circle',
+ cap:'Утро начинается с *Зарницы*',capAt:1.6,
+ sfx:[[0.1,'whoosh',{dur:.6,gain:.45}],[0.6,'chime',{gain:.5}],[1.4,'pop'],[2.0,'sparkle',{dur:.6,gain:.3}]],
+ html:`<div class="abs" id="gl" style="left:5vw;top:2vw;width:90vw;height:90vw;border-radius:50%;background:radial-gradient(circle,rgba(255,138,31,.55),rgba(255,138,31,0) 62%)"></div>
+  <div class="abs" id="sp" style="left:22vw;top:12vw;opacity:.9">${P.spark(56,SUN_HOT)}</div>`+B.can(30,'cn','left:35vw;top:22vw')+
+  `<div class="abs" id="t" style="left:0;right:0;top:96vw;text-align:center;font-size:19vw;font-weight:900;letter-spacing:-.04em;color:#f3e4d0">ЗАРНИЦА</div>
+  <div class="abs" id="s" style="left:0;right:0;top:118vw;text-align:center;font-size:5.6vw;font-weight:700;color:#ffb347">Холодный кофе без горечи</div>
+  <div class="abs" id="pr" style="left:17vw;top:130vw;display:flex;gap:3vw;align-items:center"><div style="background:#ff7a2f;color:#1c120c;font-size:5.6vw;font-weight:900;padding:2vw 5vw;border-radius:6vw">от 129 ₽</div><div style="font-size:4.2vw;font-weight:700;color:#f3e4d0;opacity:.8">zarnica.example</div></div>`,
+ update(t,$){ const k=spring(t/.6); set($('#cn'),{y:(1-k)*30,s:.85+.15*k,r:Math.sin(t*2)*2}); const sw=seg(t,.6,1.6); $('#cn .shine').style.left=(lerp(-18,96,sw))+'%'; $('#cn .shine').style.width='18%'; $('#cn .shine').style.opacity=sw>0&&sw<1?1:0;
+  set($('#gl'),{s:1+.06*Math.sin(t*3),o:eo(seg(t,0,.6))}); set($('#sp'),{y:(1-eo(seg(t,0,1.2)))*30,o:.9*eo(seg(t,0,.8))}); P.sparkAct($('#sp'),{spin:t*25,blink:P.blink(t+.5),mood:'smile'}); paint($('#sp'),SUN_HOT);
+  const a=spring((t-.3)/.5); set($('#t'),{o:cl(a*3),s:1.3-.3*a}); set($('#s'),{o:eo(seg(t,.9,1.4))}); const q=spring((t-1.2)/.45); set($('#pr'),{o:cl(q*2),s:.85+.15*q}); }};
+
+E.run({hl:'#ff7a2f',progress:'bar',music:{style:'lofi',from:'scene:2+0.6',drums:'scene:4+1.6',bpm:86,gain:.5},scenes:[s1,s2,s3,s4,s5,s6,s7,s8]});
+</script></body></html>
