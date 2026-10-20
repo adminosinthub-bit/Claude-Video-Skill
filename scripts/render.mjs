@@ -5,12 +5,12 @@
 //        [--duration 8] [--fps 30] [--width 1080] [--height 1920] [--workers N]
 //        [--from сек] [--to сек]      рендер только фрагмента (быстрая итерация)
 //        [--audio music.mp3]          подмешать звук (обрезается по длине видео, затухание 1 с)
-//        [--png] [--keep-frames]
-import { spawn, execSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+//        [--png] [--keep-frames] [--no-logos]   (логотипы P.logo('Бренд') ищутся и подставляются автоматически)
+import { spawn, spawnSync, execSync } from 'node:child_process';
+import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir, cpus } from 'node:os';
-import { join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { join, resolve, dirname } from 'node:path';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 const args = process.argv.slice(2);
@@ -41,6 +41,15 @@ const workers = Math.max(1, parseInt(opt('workers', Math.min(cpus().length, 6)),
 const audio = opt('audio', null);
 const png = args.includes('--png');
 const keep = args.includes('--keep-frames');
+
+// автоподстановка логотипов: если в HTML есть P.logo('Бренд') / data-logo, найти их и записать logos.js (--no-logos отключает)
+if (!args.includes('--no-logos')) {
+  const src = readFileSync(resolve(input), 'utf8');
+  if (/P\.logo(?:Tile)?\(|data-logo\s*=/.test(src)) {
+    const r = spawnSync(process.execPath, [join(dirname(fileURLToPath(import.meta.url)), 'logos.mjs'), 'auto', resolve(input)], { stdio: ['ignore', 'inherit', 'inherit'] });
+    if (r.status === 2) console.error('⚠ часть логотипов не найдена — вместо них будут текстовые плашки (см. выше)');
+  }
+}
 
 let chromium;
 try {

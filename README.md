@@ -14,9 +14,11 @@
 - `scripts/render.mjs` — HTML → MP4: параллельный детерминированный рендер, пресеты (вертикальный/горизонтальный/квадрат), фрагменты, звук
 - `scripts/frame.mjs` — быстрый просмотр отдельных кадров
 - `scripts/contact-sheet.sh` — контактный лист кадров для анализа (авто-раскладка для вертикальных видео)
-- `scripts/check-env.sh` — проверка node / playwright / ffmpeg
+- `scripts/logos.mjs` — автопоиск логотипов брендов (simple-icons → сайт → Wikimedia → favicon) и подстановка в HTML; `scripts/logos.selftest.mjs` — самотест
+- `scripts/check-env.sh` — проверка node / playwright / ffmpeg / curl
 - `references/engine.js` — движок сцен (субтитры с подсветкой, прогресс, переходы, easing)
-- `references/parts.js` — маскоты (бот, сова), иконки, огонёк серии, телефон, касание пальцем, конфетти, окно macOS, пузыри чата
+- `assets/logos/_custom/` — ваш бренд-кит (приоритет над автопоиском)
+- `references/parts.js` — логотипы `P.logo`/`P.logoTile`, маскоты (бот, сова), иконки, огонёк серии, телефон, касание пальцем, конфетти, окно macOS, пузыри чата
 - `references/` — контракт анимации, рубрика оценки, дизайн-заметки, шаблоны HTML
 - `examples/` — готовые ролики: реклама Claude (16:9), реклама ChatGPT (9:16, 25 с), реклама Duolingo (9:16, 40 с, 60 fps) и реклама самого Claude (9:16, 39 с, 60 fps); у вертикальных — три варианта и финал
 

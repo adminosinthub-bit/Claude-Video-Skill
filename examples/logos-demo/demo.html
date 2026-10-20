@@ -1,0 +1,9 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Демо логотипов</title>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script><script src="logos.js"></script>
+</head><body><script>
+E.run({progress:false,scenes:[{dur:2,bg:'#f5f0e8',ink:'#1f1a17',cap:'Логотипы *подставляются* сами',
+ html:`<div class="abs" style="left:10vw;top:20vw;display:flex;gap:6vw">${P.logoTile('Duolingo',24)}${P.logoTile('Telegram',24)}${P.logoTile('Claude',24)}</div>
+ <div class="abs" style="left:10vw;top:56vw;display:flex;gap:6vw;align-items:center">${P.logo('Duolingo',16)}${P.logo('Telegram',16,{color:'#1f1a17'})}${P.logo('Claude',16,{color:'currentColor'})}</div>
+ <div class="abs" style="left:10vw;top:84vw">${P.logo('Бренд-Которого-Нет',14)}</div>
+ <div class="abs" style="left:10vw;top:104vw;font-size:4vw;color:#8a7d70">нет в базе → текстовая плашка</div>`}]});
+</script></body></html>

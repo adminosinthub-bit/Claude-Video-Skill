@@ -2,7 +2,7 @@
 # Проверка окружения: node, playwright, chromium, ffmpeg.
 set -u
 ok=1
-for c in node ffmpeg; do
+for c in node ffmpeg curl; do
   command -v "$c" >/dev/null && echo "OK  $c" || { echo "НЕТ $c"; ok=0; }
 done
 if node -e "require('playwright')" 2>/dev/null || node -e "import('playwright')" 2>/dev/null; then

@@ -1,2 +1,12 @@
 work/
 node_modules/
+scripts/.cache/
+# кэш найденных логотипов (товарные знаки — не коммитим), бренд-кит _custom коммитить можно
+assets/logos/*.svg
+assets/logos/*.png
+assets/logos/*.jpg
+assets/logos/*.webp
+assets/logos/*.ico
+assets/logos/*.gif
+assets/logos/*.json
+examples/**/logos.js

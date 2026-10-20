@@ -7,6 +7,7 @@
  *   P.me(text) / P.ai(text)       пузыри чата (класс .b-me / .b-ai)
  *   P.owl(size,c,c2) + P.owlLook(root,dx,dy,blinkK)   сова-маскот (.wingL/.wingR — крылья для анимации)
  *   P.spark(size,c) + P.sparkAct(root,{spin,dx,dy,blink,mood})   маскот-искорка (Claude)
+ *   P.logo(name,size,{color}) / P.logoTile(name,size,{bg,color})   логотип бренда (ищет scripts/logos.mjs сам; нет логотипа — текстовая плашка)
  *   P.flame(size)                 огонёк серии
  *   P.phone(w, inner, style)      макет телефона (внутри .scr); w в vw
  *   P.tapHTML() + P.touch(root,t,[[t,x,y],..],[времена нажатий])   касание пальцем с рябью
@@ -145,6 +146,29 @@
     if (m && o.mood) m.setAttribute('d', o.mood === 'o' ? 'M45 60 Q50 67 55 60 Q50 55 45 60Z' : o.mood === 'flat' ? 'M43 61 L57 61' : 'M42 59 Q50 66 58 59');
   };
 
+
+  // ---------- логотипы брендов (данные кладёт scripts/logos.mjs в logos.js → window.LOGOS) ----------
+  const slugOf = (s) => (/[\u0400-\u04FF]/.test(s) ? String(s).toLowerCase() : String(s).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')).replace(/&/g, 'and').replace(/\+/g, 'plus').replace(/[^\p{L}\p{N}]/gu, '');
+  // logo(name, size, {color}) — color: 'brand' (официальный цвет), '#fff', 'currentColor'… (перекраска только у однотонных SVG)
+  const logo = (name, size = 10, o = {}) => {
+    const L = (window.LOGOS || {})[slugOf(name)];
+    if (!L) return `<span class="logo-fb" style="font-size:${size * 0.42}vw;height:${size}vw;padding:0 ${size * 0.35}vw;border-radius:${size * 0.3}vw">${name}</span>`;
+    if (L.svg) {
+      const fill = !o.color || o.color === 'brand' ? '#' + L.hex : o.color;
+      return L.svg.replace(/<svg\b/, `<svg width="${size}vw" height="${size}vw" fill="${fill}" style="display:block"`);
+    }
+    return `<img src="${L.src}" alt="${name}" style="display:block;height:${size}vw;width:auto;max-width:${size * 3}vw;object-fit:contain">`;
+  };
+  // logoTile(name, size, {bg, color, radius}) — плитка с логотипом: по умолчанию цвет бренда + белый знак (у растровых — белая плитка)
+  const logoTile = (name, size = 16, o = {}) => {
+    const L = (window.LOGOS || {})[slugOf(name)];
+    const mono = L && L.svg;
+    const bg = o.bg || (mono ? '#' + L.hex : '#fff');
+    const color = o.color || (mono ? '#fff' : undefined);
+    return `<div class="logo-tile" style="width:${size}vw;height:${size}vw;border-radius:${o.radius === undefined ? size * 0.24 : o.radius}vw;background:${bg}">${logo(name, size * 0.56, { color })}</div>`;
+  };
+  const hasLogo = (name) => !!(window.LOGOS || {})[slugOf(name)];
+
   const style = document.createElement('style');
   style.textContent = `
   .mwin{position:absolute;background:var(--win,#fff);color:var(--winInk,#1d1b19);border-radius:3.2vw;overflow:hidden;box-shadow:0 4vw 10vw rgba(20,20,40,.28),0 0 0 .2vw rgba(0,0,0,.08);display:flex;flex-direction:column}
@@ -160,8 +184,10 @@
   .tp{background:rgba(40,40,60,.35);border:.5vw solid rgba(255,255,255,.95);box-shadow:0 1vw 3vw rgba(0,0,0,.3);opacity:0}
   .tr{border:.6vw solid rgba(255,255,255,.9);opacity:0}
   .cf{position:absolute;left:0;top:0;display:block;border-radius:.3vw;opacity:0;z-index:70}
+  .logo-fb{display:inline-flex;align-items:center;background:#1d1b19;color:#fff;font-weight:800;letter-spacing:-.01em;white-space:nowrap}
+  .logo-tile{display:grid;place-items:center;box-shadow:0 1vw 0 rgba(0,0,0,.15)}
   .mono{font:3.3vw/1.5 ui-monospace,Menlo,"DejaVu Sans Mono",monospace}
   `;
   document.head.appendChild(style);
-  window.P = { bot, blink, icon, win, me, ai, paths, owl, owlLook, spark, sparkAct, flame, phone, tapHTML, touch, confetti, cfUpdate };
+  window.P = { bot, blink, icon, win, me, ai, paths, owl, owlLook, spark, sparkAct, logo, logoTile, hasLogo, flame, phone, tapHTML, touch, confetti, cfUpdate };
 })();
