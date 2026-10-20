@@ -129,21 +129,32 @@ if (info.audio && !has('no-sfx')) {
   }
 }
 
-const ff = ['-v', 'error', '-y', '-framerate', String(fps * blurN), '-i', join(dir, `f%07d.${ext}`)];
-const audioIns = [];
-if (sfxWav) { ff.push('-ss', String(t0), '-i', sfxWav); audioIns.push(audioIns.length + 1); }
-if (userAudio) { ff.push('-i', resolve(userAudio)); audioIns.push(audioIns.length + 1); }
-const vf = blurN > 1 ? `tmix=frames=${blurN},select='eq(mod(n\\,${blurN})\\,${blurN - 1})',setpts=N/(${fps}*TB)` : null;
-const fade = `afade=t=out:st=${Math.max(0, dur - 0.8).toFixed(2)}:d=0.8`;
-const loud = 'loudnorm=I=-14:TP=-1.5:LRA=11';
-if (audioIns.length === 2) {
-  ff.push('-filter_complex', `${vf ? `[0:v]${vf}[v];` : ''}[2:a]volume=0.55[m];[1:a][m]amix=inputs=2:normalize=0,${loud},${fade}[a]`, '-map', vf ? '[v]' : '0:v', '-map', '[a]');
-} else {
-  if (vf) ff.push('-vf', vf);
-  if (audioIns.length === 1) ff.push('-af', `${loud},${fade}`);
+// звук: свести источники в один wav, затем двухпроходная нормализация громкости до −14 LUFS
+let mixWav = null;
+const srcs = [sfxWav ? ['-ss', String(t0), '-i', sfxWav] : null, userAudio ? ['-i', resolve(userAudio)] : null].filter(Boolean);
+if (srcs.length) {
+  mixWav = join(dir, 'mix.wav');
+  const fade = `afade=t=out:st=${Math.max(0, dur - 0.8).toFixed(2)}:d=0.8`;
+  const filt = srcs.length === 2 ? `[1:a]volume=0.55[m];[0:a][m]amix=inputs=2:normalize=0,${fade}` : fade;
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-y', ...srcs.flat(), '-t', dur.toFixed(3), srcs.length === 2 ? '-filter_complex' : '-af', filt, '-ar', '48000', '-ac', '2', mixWav]);
+  if (r.status !== 0) { console.error('⚠ не удалось свести звук — видео будет без звука'); mixWav = null; }
 }
+let loud = 'loudnorm=I=-14:TP=-1.5:LRA=11';
+if (mixWav) {
+  const m = spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', mixWav, '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json', '-f', 'null', '-'], { encoding: 'utf8' });
+  const js = (m.stderr || '').match(/\{[\s\S]*?\}/g)?.pop();
+  try {
+    const v = JSON.parse(js);
+    loud = `loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=${v.input_i}:measured_TP=${v.input_tp}:measured_LRA=${v.input_lra}:measured_thresh=${v.input_thresh}:offset=${v.target_offset}:linear=true`;
+  } catch { /* остаётся однопроходная нормализация */ }
+}
+
+const ff = ['-v', 'error', '-y', '-framerate', String(fps * blurN), '-i', join(dir, `f%07d.${ext}`)];
+if (mixWav) ff.push('-i', mixWav);
+if (blurN > 1) ff.push('-vf', `tmix=frames=${blurN},select='eq(mod(n\\,${blurN})\\,${blurN - 1})',setpts=N/(${fps}*TB)`);
+if (mixWav) ff.push('-af', `${loud},aresample=48000`);
 ff.push('-c:v', 'libx264', '-preset', MAX ? 'slow' : 'medium', ...(MAX ? ['-tune', 'animation'] : []), '-pix_fmt', 'yuv420p', '-crf', crf, '-r', String(fps), '-movflags', '+faststart');
-if (audioIns.length) ff.push('-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-t', dur.toFixed(3));
+if (mixWav) ff.push('-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-t', dur.toFixed(3));
 ff.push(out);
 await new Promise((res, rej) => {
   const p = spawn('ffmpeg', ff, { stdio: 'inherit' });
