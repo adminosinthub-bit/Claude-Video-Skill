@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Duolingo — 5 минут (финал)</title>
+<script type="importmap">{"imports":{
+  "three":"../../vendor/node_modules/three/build/three.module.js",
+  "three/addons/":"../../vendor/node_modules/three/examples/jsm/",
+  "opentype":"../../vendor/node_modules/opentype.js/dist/opentype.module.js"}}</script>
+<script src="../../references/engine.js"></script><script src="../../references/parts.js"></script><script src="logos.js"></script>
+<style>
+/* Nunito (OFL) — скруглённый жирный шрифт, локально */
+@font-face{font-family:Nunito;font-weight:800;src:url(va-fonts/nunito-cyrillic-800-normal.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Nunito;font-weight:800;src:url(va-fonts/nunito-latin-800-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Nunito;font-weight:900;src:url(va-fonts/nunito-cyrillic-900-normal.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Nunito;font-weight:900;src:url(va-fonts/nunito-latin-900-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+html,body{font-family:Nunito,Inter,system-ui,sans-serif}
+.cap{font-family:Nunito,Inter,sans-serif;font-weight:900;font-size:5.6vw}
+.abs{position:absolute}
+.kick{position:absolute;left:6vw;top:7.6vw;display:flex;align-items:center;gap:2.2vw;font-size:3.6vw;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#4b4b4b;z-index:5;white-space:nowrap;transform-origin:0 50%}
+.kick b{color:#fff;padding:.8vw 2.2vw;border-radius:2.4vw;letter-spacing:.04em}
+.dc{position:absolute;top:0;display:block;opacity:.32}
+.lt{display:inline-block}
+.wl{display:inline-block}
+/* экран урока */
+.scr{background:#fff}
+.hdr{position:absolute;left:0;right:0;top:0;height:13vw;background:#fff;z-index:8}
+.pbar{position:absolute;background:#e5e5e5;border-radius:2vw;overflow:hidden}
+#pfill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:2vw;background:#58cc02}
+#pfill:after{content:'';position:absolute;left:1.2vw;right:1.2vw;top:.6vw;height:.8vw;border-radius:1vw;background:rgba(255,255,255,.4)}
+.pg{position:absolute;inset:0;overflow:hidden}
+.pz{position:absolute;inset:0}
+.ttl{position:absolute;left:3.4vw;top:15.4vw;font-size:5.6vw;font-weight:900;color:#3c3c3c;white-space:nowrap;display:flex;align-items:center;gap:1.6vw;z-index:2}
+.tile,.opt,.opt2{position:absolute;border:.5vw solid #e5e5e5;border-bottom-width:1.1vw;border-radius:3vw;background:#fff;color:#4b4b4b;font-weight:800}
+.tile{display:grid;place-items:center;font-size:4.6vw}
+.opt{display:flex;align-items:center;gap:3vw;padding:0 3vw;font-size:4.6vw;white-space:nowrap}
+.opt2{display:grid;place-items:center;font-size:4.6vw}
+.opt2 span{grid-area:1/1}
+.num{width:5.6vw;height:5.6vw;border:.45vw solid #e5e5e5;border-radius:1.5vw;display:grid;place-items:center;font-size:3vw;color:#afafaf;flex:none}
+.bub{position:absolute;background:#fff;border:.5vw solid #e5e5e5;border-radius:3.6vw;padding:2.2vw 2.8vw;font-size:4.6vw;font-weight:800;color:#4b4b4b;line-height:1.2;transform-origin:0 50%}
+.bub:before{content:'';position:absolute;left:-1.9vw;top:4.4vw;width:2.8vw;height:2.8vw;background:#fff;border-left:.5vw solid #e5e5e5;border-bottom:.5vw solid #e5e5e5;transform:rotate(45deg)}
+.btn{position:absolute;border-radius:3.2vw;display:grid;place-items:center;font-size:4.2vw;font-weight:900;letter-spacing:.07em;z-index:6;white-space:nowrap}
+.sheet{position:absolute;left:0;right:0;bottom:-3vw;background:#d7ffb8;padding:3vw 3.6vw;z-index:5}
+.shrow{display:flex;align-items:center;gap:3vw}
+.okc{width:9.4vw;height:9.4vw;border-radius:50%;background:#fff;display:grid;place-items:center;flex:none}
+.sht{font-size:5.8vw;font-weight:900;color:#58a700;line-height:1.08}
+.shs{font-size:4.7vw;font-weight:900;color:#58a700;margin-top:.8vw}
+.spk{border-radius:3vw;background:#1cb0f6;box-shadow:0 1vw 0 #1899d6;display:grid;place-items:center}
+.wb{display:block;width:1.2vw;border-radius:1vw;background:#1cb0f6;flex:none}
+.mb{position:absolute;width:1.7vw;border-radius:1vw;background:#1cb0f6}
+.ring{position:absolute;border-radius:50%;border:.7vw solid #1cb0f6}
+.inp{position:absolute;border:.5vw solid #e5e5e5;border-radius:3.4vw;background:#f7f7f7;padding:3.2vw 3.4vw;font-size:6.4vw;font-weight:900;color:#3c3c3c;line-height:1.2}
+.caret{display:inline-block;width:.7vw;height:6.6vw;background:#1cb0f6;vertical-align:-1vw;margin-left:.3vw;border-radius:.3vw}
+.key{position:absolute;height:7vw;border-radius:1.3vw;background:#fff;box-shadow:0 .5vw 0 #c3c8cf;display:grid;place-items:center;font-size:3.4vw;font-weight:800;color:#3c3c3c}
+.card{position:absolute;border:.5vw solid #e5e5e5;border-bottom-width:1.3vw;border-radius:4vw;background:#fff;display:grid;place-items:center;font-size:10vw;font-weight:900;color:#3c3c3c}
+.row{position:absolute;left:3.4vw;width:49.6vw;height:11vw;border-radius:3vw;border:.5vw solid;background:#fff;display:flex;align-items:center;gap:2.2vw;padding:0 2.6vw}
+.rb{width:7vw;height:7vw;border-radius:2vw;display:grid;place-items:center;flex:none}
+.rl{font-size:4.6vw;font-weight:900;color:#4b4b4b;flex:1;white-space:nowrap}
+.rv{font-size:5.3vw;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* карточки выученных фраз (итог урока) */
+.pc{position:absolute;left:3.4vw;width:49.6vw;height:13vw;background:#fff;border:.5vw solid #e5e5e5;border-left:2.2vw solid;border-bottom-width:1.2vw;border-radius:3vw;padding:1vw 0 0 2.4vw;z-index:2}
+.pcp{font-size:4.7vw;font-weight:900;color:#3c3c3c;line-height:1.05;white-space:nowrap}
+.pct{font-size:4.5vw;font-weight:800;color:#8c8c8c;line-height:1.1;margin-top:.3vw;white-space:nowrap;display:flex;align-items:center;gap:1.4vw}
+.pcs{width:4.8vw;height:4.8vw;border-radius:50%;background:#1cb0f6;display:grid;place-items:center;flex:none}
+/* вспышка «верно»: лучи из центра плитки */
+.bst{position:absolute;width:0;height:0;z-index:7;pointer-events:none}
+.bst i{position:absolute;left:-.65vw;top:-1.7vw;width:1.3vw;height:3.4vw;border-radius:1vw;display:block;opacity:0}
+.bst b{position:absolute;left:-9vw;top:-9vw;width:18vw;height:18vw;border-radius:50%;border:.8vw solid #58cc02;opacity:0;display:block}
+/* шкала комбо */
+.pip{position:absolute;width:8vw;height:8vw;border-radius:50%;border:.6vw solid #e5e5e5;background:#fff;display:grid;place-items:center}
+.rmask{-webkit-mask-image:radial-gradient(circle,#000 22%,transparent 66%);mask-image:radial-gradient(circle,#000 22%,transparent 66%)}
+/* таймер */
+#tmr{position:absolute;inset:0;z-index:60;pointer-events:none}
+#tpill{position:absolute;left:61vw;top:5vw;width:35vw;height:13vw;border-radius:6.5vw;background:#fff;box-shadow:0 1vw 0 rgba(0,0,0,.1)}
+#tring{position:absolute;left:0;top:0;width:62vw;height:62vw;transform-origin:50% 50%;overflow:visible}
+#tdig{position:absolute;left:0;top:0;width:60vw;height:26vw;line-height:26vw;text-align:center;font-size:21vw;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.02em;transform-origin:50% 50%}
+#tchk{position:absolute;left:62.4vw;top:6.4vw;width:10.2vw;height:10.2vw;border-radius:50%;background:#fff;display:grid;place-items:center}
+.tsh{position:absolute;left:0;top:0;width:6vw;height:6vw;margin:-3vw 0 0 -3vw;opacity:0}
+.gsp{position:absolute;left:0;top:0;width:7vw;height:7vw;margin:-3.5vw 0 0 -3.5vw;opacity:0;z-index:5}
+/* 3D-сцена: холст поверх 2D-лучей */
+.s3d canvas{z-index:1}
+</style></head><body><script type="module">
+import { E3D } from '../../references/engine3d.js';
+const { THREE } = E3D;
+const { seg, eo, ei, eio, eb, spring, lerp, cl, smooth, mix } = E;
+
+// шрифт — до старта (рендер ждёт window.__pending)
+window.__pending = window.__pending || [];
+['800', '900'].forEach((w) => window.__pending.push(document.fonts.load(`${w} 40px Nunito`, 'Аяaz09')));
+
+/* ---------- палитра и мелочи ---------- */
+const G = '#58cc02', G2 = '#58a700', Y = '#ffc800', Y2 = '#e5a400', B = '#1cb0f6', B2 = '#1899d6', R = '#ff4b4b', R2 = '#ea2b2b', V = '#ce82ff', V2 = '#a560e8', INK = '#3c3c3c';
+const EX = [G, B, V, Y, R], EX2 = [G2, B2, V2, Y2, R2];
+const OC = '#a46cf2', OC2 = '#efe3ff';
+const owl = (s) => P.owl(s, OC, OC2);
+const IC = {
+  pairs: '<rect x="2.5" y="6.5" width="10" height="13" rx="2.2"/><rect x="11.5" y="4" width="10" height="13" rx="2.2"/>',
+  phones: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="13.5" width="5" height="7.5" rx="2"/><rect x="16" y="13.5" width="5" height="7.5" rx="2"/>',
+  mic: P.paths.mic, clock: P.paths.clock, check: P.paths.check,
+  kbd: '<rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M6 10.3h.01M10 10.3h.01M14 10.3h.01M18 10.3h.01M7.5 14.8h9"/>',
+  bolt: '<path d="M13.5 2.5L5 13.5h6.5l-1 8 8.5-11h-6.5z"/>',
+  spk: '<path d="M4 9.5v5h3.5l5 4v-13l-5 4z"/><path d="M16 9a4.2 4.2 0 0 1 0 6M18.6 6.4a8 8 0 0 1 0 11.2"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  heart: '<path d="M12 20.5s-7.5-4.6-7.5-10.3A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.6c0 5.7-7.5 10.3-7.5 10.3z"/>',
+  gem: '<path d="M6.5 3.5h11l3.5 5.5-9 12-9-12z"/><path d="M3 9h18M9.5 3.5L12 9l2.5-5.5M12 21L8.5 9M12 21l3.5-12"/>',
+};
+const ic = (n, c, s, o = {}) => `<svg width="${s}vw" height="${s}vw" viewBox="0 0 24 24" fill="${o.fill || 'none'}" stroke="${o.stroke || c}" stroke-width="${o.sw || 2.6}" stroke-linecap="round" stroke-linejoin="round" style="display:block">${IC[n]}</svg>`;
+const STAR = '<svg width="100%" height="100%" viewBox="-10 -10 20 20" style="display:block;overflow:visible"><path d="M0 -10 Q1.2 -1.2 10 0 Q1.2 1.2 0 10 Q-1.2 1.2 -10 0 Q-1.2 -1.2 0 -10Z" fill="#fff"/></svg>';
+const rays = (n, c, op, half = 4.5) => Array.from({ length: n }, (_, i) => { const a = i * 360 / n, p = (d) => [(Math.sin(d * Math.PI / 180) * 72).toFixed(1), (-Math.cos(d * Math.PI / 180) * 72).toFixed(1)]; const [x1, y1] = p(a - half), [x2, y2] = p(a + half); return `<path d="M0 0 L${x1} ${y1} L${x2} ${y2}Z" fill="${c}" opacity="${op}"/>`; }).join('');
+const K = (badge, col, label, ink = '#4b4b4b') => `<div class="kick" style="color:${ink}"><b style="background:${col}">${badge}</b>${label}</div>`;
+const ST = {
+  idle: ['#ffffff', '#e5e5e5', '#4b4b4b'], sel: ['#ddf4ff', '#84d8ff', '#1899d6'], ok: ['#d7ffb8', '#58cc02', '#58a700'],
+  bad: ['#ffdfe0', '#ff4b4b', '#ea2b2b'], done: ['#ffffff', '#efefef', '#d4d4d4'],
+};
+const paint = (el, s, s2, k = 0) => {
+  const c = s2 ? s.map((v, i) => mix(v, s2[i], k)) : s;
+  el.style.background = c[0]; el.style.borderColor = c[1]; el.style.color = c[2];
+};
+// кнопка: off — серая, green — зелёная, white — белая; press — нажата
+const btn = (el, mode, press) => {
+  const M = { off: ['#e5e5e5', '#e5e5e5', '#afafaf'], green: [G, G2, '#fff'], white: ['#fff', 'rgba(0,0,0,.18)', G] }[mode];
+  el.style.background = M[0]; el.style.color = M[2];
+  el.style.boxShadow = mode === 'off' ? 'none' : `0 ${press ? .15 : 1.1}vw 0 ${M[1]}`;
+  return press ? 1 : 0;
+};
+const kfAt = (kf, t) => {
+  if (t <= kf[0][0]) return [kf[0][1], kf[0][2]];
+  for (let i = 1; i < kf.length; i++) if (t <= kf[i][0]) { const k = smooth(cl((t - kf[i - 1][0]) / (kf[i][0] - kf[i - 1][0]))); return [lerp(kf[i - 1][1], kf[i][1], k), lerp(kf[i - 1][2], kf[i][2], k)]; }
+  const l = kf[kf.length - 1]; return [l[1], l[2]];
+};
+// касание «штрихами»: палец входит снизу справа, жмёт и гаснет за 0.2 с после последнего тапа штриха
+// strokes: [{kf:[[t,x,y],..], taps:[t..], holds:[[a,b]]}]
+const touch = (root, t, strokes) => {
+  const tp = root.querySelector('.tp'), tr = root.querySelector('.tr');
+  let o = 0, x = 0, y = 0, pr = false, held = null, last = null;
+  for (const s of strokes) {
+    const a = s.kf[0][0], b = s.kf[s.kf.length - 1][0];
+    if (t >= a - .15 && t <= b) { const v = cl((t - a + .15) / .15) * cl((b - t) / .16); if (v >= o) { o = v; [x, y] = kfAt(s.kf, t); held = (s.holds || []).find(([h0, h1]) => t >= h0 && t <= h1); pr = !!held || s.taps.some((q) => t >= q && t < q + .14); } }
+    for (const q of s.taps) if (q <= t && (!last || q > last[0])) last = [q, ...kfAt(s.kf, q)];
+  }
+  tp.style.opacity = o; tp.style.transform = `translate(${x}vw,${y}vw) scale(${pr ? .78 : 1})`;
+  const dt = last ? t - last[0] : 9;
+  if (dt < .55) { const k = dt / .55; tr.style.opacity = (1 - k) * .9; tr.style.transform = `translate(${last[1]}vw,${last[2]}vw) scale(${.4 + 1.9 * k})`; }
+  else if (held) { const k = (t * 1.6) % 1; tr.style.opacity = (1 - k) * .7; tr.style.transform = `translate(${x}vw,${y}vw) scale(${.6 + 1.6 * k})`; }
+  else tr.style.opacity = 0;
+};
+// вход справа-снизу, но выше субтитров; уход вниз-вправо с угасанием
+const tap1 = (q, x, y) => ({ kf: [[q - .32, x + 22, y + 7], [q, x, y], [q + .2, x + 5, y + 8]], taps: [q] });
+const tapN = (pts) => { const f = pts[0], l = pts[pts.length - 1]; return { kf: [[f[0] - .32, f[1] + 22, f[2] + 7], ...pts, [l[0] + .2, l[1] + 5, l[2] + 8]], taps: pts.map((p) => p[0]) }; };
+const fmt = (s) => { const v = Math.max(0, Math.floor(s + 1e-6)); return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`; };
+const $ = (id) => document.getElementById(id);
+const sx = (el, o) => E.set(el, o);
+
+/* ---------- раскладка по времени ---------- */
+const DUR = [2.6, 3.3, 3.8, 3.8, 3.2, 3.4, 3.4, 3.0, 4.2];
+const S = [0]; DUR.forEach((d) => S.push(+(S[S.length - 1] + d).toFixed(3)));
+const TOTAL = S[S.length - 1];
+// телефон: ширина 60vw, слева 20vw, сверху 20vw; экран начинается на 1.8vw внутрь (рамка)
+const SX = 21.8, SY = 21.8, F = (x, y) => [SX + x, SY + y];
+
+/* ---------- фон-декор: плавающие фигуры по краям (гаснут у верхней зоны ярлыка и таймера) ---------- */
+const DECO = [[3, 7, 0, 7], [86, 9, 1, 9], [8, 5, 1, 6], [89, 6, 0, 8], [2, 8, 1, 5], [84, 5, 0, 7], [11, 6, 0, 10], [90, 7, 1, 6]];
+const deco = (c) => DECO.map((d, i) => `<i class="dc" style="left:${d[0]}vw;width:${d[1]}vw;height:${d[1]}vw;background:${c};border-radius:${d[2] ? '50%' : '2.4vw'}"></i>`).join('');
+const decoUpd = ($$, t) => $$('.dc').forEach((e, i) => { const d = DECO[i]; const y = 185 - ((t * d[3] + i * 23) % 200); e.style.opacity = .32 * cl((y - 24) / 12) * cl((182 - y) / 8); e.style.transform = `translateY(${y}vw) rotate(${t * (i % 2 ? 30 : -24) + i * 20}deg)`; });
+
+/* ===================== ЭКРАН УРОКА: страницы ===================== */
+/* 1. Пары */
+const P1L = ['кот', 'вода', 'яблоко', 'хлеб'], P1R = ['bread', 'cat', 'water', 'apple'], P1Y = [27, 41, 55, 69];
+const P1C = { L0: { sel: .45, ok: .75 }, R1: { ok: .75 }, L1: { sel: 1.05, bad: 1.35, ok: 1.65 }, R0: { bad: 1.35, ok: 2.7 }, R2: { ok: 1.65 }, L2: { sel: 1.95, ok: 2.2 }, R3: { ok: 2.2 }, L3: { sel: 2.45, ok: 2.7 } };
+const P1T = [[.45, 'L0'], [.75, 'R1'], [1.05, 'L1'], [1.35, 'R0'], [1.65, 'R2'], [1.95, 'L2'], [2.2, 'R3'], [2.45, 'L3'], [2.7, 'R0']];
+const P1BAD = 1.35, P1DONE = 2.85;
+const p1c = (id) => [id[0] === 'L' ? 15.2 : 41.2, P1Y[+id[1]] + 5.75];
+const P1S = tapN(P1T.map(([t, id]) => { const [x, y] = p1c(id); return [t, ...F(x + 8.5, y + 4)]; })); // жмём правый нижний край плитки
+const P1B = [[.75, 'R1'], [1.65, 'R2'], [2.2, 'R3'], [2.7, 'R0']]; // пара собрана → вспышка
+// вспышка: кольцо + 8 лучей разлетаются за 0.45 с
+const burst = (el, d) => {
+  const k = cl(d / .45), on = d >= 0 && d < .45;
+  el.querySelectorAll('i').forEach((r, j) => { r.style.opacity = on ? 1 - k * k : 0; r.style.transform = `rotate(${j * 45 + 22.5}deg) translateY(${-(6.5 + 7 * eo(k))}vw) scaleY(${1 - .6 * k})`; });
+  const b = el.querySelector('b'); b.style.opacity = on ? (1 - k) * .9 : 0; b.style.transform = `scale(${.5 + .9 * eo(k)})`;
+};
+const pg1 = `<div class="ttl">Выбери пары</div>` +
+  P1L.map((w, i) => `<div class="tile" id="p1L${i}" style="left:3.4vw;top:${P1Y[i]}vw;width:23.6vw;height:11.5vw">${w}</div>`).join('') +
+  P1R.map((w, i) => `<div class="tile" id="p1R${i}" style="left:29.4vw;top:${P1Y[i]}vw;width:23.6vw;height:11.5vw">${w}</div>`).join('') +
+  P1B.map(([, id], k) => { const [x, y] = p1c(id); return `<div class="bst" id="p1x${k}" style="left:${x}vw;top:${y}vw"><b></b>${Array.from({ length: 8 }, (_, j) => `<i style="background:${j % 2 ? Y : G}"></i>`).join('')}</div>`; }).join('') +
+  `<div class="abs" id="p1ow" style="left:2.4vw;top:94vw">${owl(18)}</div><div class="bub" id="p1bb" style="left:23.6vw;top:96.5vw;width:29.6vw"><span id="p1b1">Найди все пары!</span><span id="p1b2" style="color:#58a700;font-weight:900">Все пары найдены!</span></div>`;
+const tileUpd = (el, c, lt, ent) => {
+  let x = 0, sc = 1;
+  if (c.ok !== undefined && lt >= c.ok) { const d = lt - c.ok; paint(el, ST.ok, ST.done, seg(d, .5, .8)); sc = 1 + .1 * Math.sin(cl(d / .32) * Math.PI); }
+  else if (c.bad !== undefined && lt >= c.bad && lt < c.bad + .45) { const d = lt - c.bad; paint(el, ST.bad); x = Math.sin(d * 55) * 1.3 * (1 - d / .45); }
+  else if (c.sel !== undefined && lt >= c.sel) { paint(el, ST.sel); sc = 1 + .06 * Math.sin(cl((lt - c.sel) / .2) * Math.PI); }
+  else paint(el, ST.idle);
+  el.style.transform = `translateX(${x}vw) scale(${sc * ent})`; el.style.opacity = cl(ent * 2);
+};
+function up1(lt) {
+  for (const side of ['L', 'R']) for (let i = 0; i < 4; i++) { const id = side + i; tileUpd($('p1' + id), P1C[id] || {}, lt, spring((lt + .25 - (i * 2 + (side === 'R')) * .045) / .5)); }
+  const [fx] = kfAt(P1S.kf, lt), ow = $('p1ow');
+  sx(ow, { y: Math.sin(lt * 3) * .5 - (lt > P1DONE ? Math.abs(Math.sin((lt - P1DONE) * 8)) * 1.6 * (1 - seg(lt, P1DONE, P1DONE + .75)) : 0) });
+  P.owlLook(ow, lt < P1DONE ? (fx > SX + 28 ? 2.6 : -1) : 1.5, lt < P1DONE ? -2.6 : 0, P.blink(lt + 1.1));
+  ow.querySelector('.wingR').style.transform = `rotate(${lt > P1DONE ? -25 + Math.sin(lt * 14) * 18 : 0}deg)`;
+  const b = spring((lt - .2) / .45), b2 = spring((lt - P1DONE) / .45), sw = lt >= P1DONE;
+  $('p1b1').style.display = sw ? 'none' : ''; $('p1b2').style.display = sw ? '' : 'none';
+  sx($('p1bb'), { o: cl(b * 2), s: (.6 + .4 * b) * (sw ? .85 + .15 * b2 : 1) }); $('p1bb').style.borderColor = sw ? G : '#e5e5e5';
+  P1B.forEach(([a], k) => burst($('p1x' + k), lt - a));
+  touch($('tc1'), lt, [P1S]);
+}
+
+/* 2. Аудирование */
+const P2O = ['Добрый вечер', 'Доброе утро', 'Добрый день'], P2Y = [51, 63.5, 76];
+const headphones = (s) => `<svg class="abs" style="left:0;top:0;overflow:visible" width="${s}vw" height="${s}vw" viewBox="0 0 100 100"><path d="M12 56 C 6 -2, 94 -2, 88 56" stroke="#4b4b4b" stroke-width="6.5" fill="none" stroke-linecap="round"/><rect x="2" y="42" width="17" height="27" rx="7.5" fill="#1cb0f6"/><rect x="81" y="42" width="17" height="27" rx="7.5" fill="#1cb0f6"/><rect x="5.5" y="47" width="6" height="17" rx="3" fill="#84d8ff"/><rect x="88.5" y="47" width="6" height="17" rx="3" fill="#84d8ff"/></svg>`;
+const P2S = [tap1(.5, ...F(34, 38.5)), { kf: [[1.43, ...F(62, 93)], [1.75, ...F(47, P2Y[1] + 7.5)], [2.25, ...F(47.5, 111)], [2.45, ...F(52.5, 119)]], taps: [1.75, 2.25] }, tap1(3.35, ...F(47.5, 111))];
+const pg2 = `<div class="ttl">Что ты слышишь?</div>
+  <div class="abs" id="p2ow" style="left:1.6vw;top:26vw;width:20vw;height:20vw">${owl(20)}${headphones(20)}</div>
+  <div class="bub" id="p2bb" style="left:23.4vw;top:28.4vw;width:30vw;height:16vw;padding:0">
+    <div class="abs spk" id="p2sp" style="left:2.2vw;top:2.2vw;width:10.6vw;height:10.6vw">${ic('spk', '#fff', 6.6, { sw: 2.4 })}</div>
+    <div class="abs" style="left:15.2vw;top:2.2vw;width:12.6vw;height:10.6vw;display:flex;align-items:center;gap:.7vw">${'<i class="wb"></i>'.repeat(7)}</div></div>` +
+  P2O.map((w, i) => `<div class="opt" id="p2o${i}" style="left:3.4vw;top:${P2Y[i]}vw;width:49.6vw;height:10.5vw"><span class="num">${i + 1}</span>${w}</div>`).join('') +
+  `<div class="btn" id="p2bt" style="left:3.4vw;top:104vw;width:49.6vw;height:10.5vw">ПРОВЕРИТЬ</div>
+  <div class="sheet" id="p2sh" style="top:87vw;z-index:7"><div class="shrow"><span class="okc">${ic('check', G, 5.6, { sw: 3.6 })}</span><div><div class="sht">Верно!</div><div class="shs">Good morning!</div></div></div><div class="btn" id="p2bn" style="left:3.4vw;top:17vw;width:49.6vw;height:10.5vw">ДАЛЕЕ</div></div>`;
+function up2(lt) {
+  const pr = lt >= .5 && lt < .62;
+  const sp = $('p2sp'); sp.style.transform = `translateY(${pr ? .8 : 0}vw) scale(${1 + (lt > .62 && lt < 1.7 ? .05 * Math.sin(lt * 18) : 0)})`; sp.style.boxShadow = `0 ${pr ? .2 : 1}vw 0 ${B2}`;
+  const play = cl((lt - .55) / .1) * cl((1.7 - lt) / .15);
+  $('p2bb').querySelectorAll('.wb').forEach((e, i) => { e.style.height = (1.4 + play * 8.6 * Math.abs(Math.sin(lt * 11 + i * 1.7) * Math.sin(lt * 4.3 + i))) + 'vw'; e.style.opacity = .45 + .55 * play; });
+  P2O.forEach((w, i) => { const e = $('p2o' + i); const n = e.querySelector('.num');
+    if (i === 1 && lt >= 2.35) { paint(e, ST.ok); n.style.borderColor = G; n.style.color = G2; }
+    else if (i === 1 && lt >= 1.75) { paint(e, ST.sel); n.style.borderColor = '#84d8ff'; n.style.color = B2; }
+    else { paint(e, ST.idle); n.style.borderColor = '#e5e5e5'; n.style.color = '#afafaf'; }
+    const pop = i === 1 ? 1 + .05 * Math.sin(cl((lt - 1.75) / .2) * Math.PI) + .05 * Math.sin(cl((lt - 2.35) / .25) * Math.PI) : 1;
+    const en = spring((lt - .1 - i * .06) / .45); e.style.transform = `translateY(${(1 - en) * 6}vw) scale(${pop})`; e.style.opacity = cl(en * 2); });
+  const bt = $('p2bt'), press = lt >= 2.25 && lt < 2.37;
+  const bn = $('p2bn'), pn = lt >= 3.35 && lt < 3.47; btn(bn, 'green', pn); bn.style.transform = `translateY(${pn ? 1 : 0}vw)`;
+  btn(bt, lt < 1.75 ? 'off' : 'green', press); bt.style.transform = `translateY(${press ? 1 : 0}vw)`;
+  sx($('p2sh'), { y: (1 - spring((lt - 2.35) / .5)) * 40 });
+  const ow = $('p2ow'); sx(ow, { y: (play > 0 ? -Math.abs(Math.sin(lt * 7)) * .9 : Math.sin(lt * 3) * .4) - (lt > 2.4 ? Math.abs(Math.sin((lt - 2.4) * 8)) * 1.5 * (1 - seg(lt, 2.4, 3.2)) : 0) });
+  P.owlLook(ow, lt < 1.6 ? 2.8 : 1, lt < 1.6 ? -1 : 2.6, P.blink(lt + .4));
+  ow.querySelector('.wingL').style.transform = `rotate(${lt > 2.4 ? 25 + Math.sin(lt * 14) * 16 : 0}deg)`;
+  touch($('tc2'), lt, P2S);
+}
+
+/* 3. Говорение: камера наезжает на микрофон */
+const P3W = ['Nice', 'to', 'meet', 'you!'], P3WT = [1.0, 1.3, 1.6, 1.9];
+const P3S = [{ kf: [[.28, ...F(43, 92)], [.6, ...F(28.2, 68)], [2.2, ...F(28.2, 68)], [2.4, ...F(34, 77)]], taps: [.6], holds: [[.6, 2.2]] }, tap1(3.35, ...F(47.5, 109))];
+const push3 = (lt) => eio(seg(lt, .45, 1.0)) - eio(seg(lt, 2.0, 2.35));
+const pg3 = `<div class="ttl">Произнеси фразу</div><div class="pz" id="pz3" style="transform-origin:28.2vw 68vw">
+  <div class="abs" id="p3ow" style="left:1.6vw;top:26vw">${owl(20)}</div>
+  <div class="bub" id="p3bb" style="left:23.4vw;top:28.4vw;width:31vw;font-size:4.6vw;font-weight:900;padding:2.4vw 2.8vw;white-space:nowrap">${P3W.map((w, i) => `<span id="p3w${i}" style="display:inline-block">${w}</span>`).map((h, i) => h + (i === 1 ? '<br>' : ' ')).join('')}</div>
+  ${[0, 1, 2].map((i) => `<div class="ring" id="p3r${i}" style="left:15.2vw;top:55vw;width:26vw;height:26vw"></div>`).join('')}
+  <div class="abs" id="p3mic" style="left:15.2vw;top:55vw;width:26vw;height:26vw;border-radius:50%;background:${B};box-shadow:0 1.4vw 0 ${B2};display:grid;place-items:center">${ic('mic', '#fff', 12, { sw: 2.4 })}</div>
+  ${Array.from({ length: 15 }, (_, i) => `<i class="mb" id="p3b${i}" style="left:${6.4 + i * 3}vw;top:94vw"></i>`).join('')}
+  <div class="abs" id="p3hint" style="left:0;right:0;top:101vw;text-align:center;font-size:4.5vw;font-weight:900;color:#afafaf">НАЖМИ И ГОВОРИ</div>
+  <div class="sheet" id="p3sh" style="top:85vw"><div class="shrow"><span class="okc">${ic('check', G, 5.6, { sw: 3.6 })}</span><div class="sht" style="font-size:5.2vw">Отлично<br>произнесено!</div></div><div class="btn" id="p3bt" style="left:3.4vw;top:17vw;width:49.6vw;height:10.5vw">ДАЛЕЕ</div></div></div>`;
+function up3(lt) {
+  $('pz3').style.transform = `scale(${1 + .12 * push3(lt)})`;
+  const held = lt >= .6 && lt <= 2.2, hk = cl((lt - .6) / .15) * cl((2.2 - lt) / .15);
+  sx($('p3mic'), { s: (held ? .94 : 1) * (1 + .03 * Math.sin(lt * 4)) * spring((lt + .1) / .5) });
+  $('p3mic').style.boxShadow = `0 ${held ? .3 : 1.4}vw 0 ${B2}`;
+  [0, 1, 2].forEach((i) => { const k = ((lt * 1.1 + i / 3) % 1); const e = $('p3r' + i); e.style.opacity = hk * (1 - k) * .8; e.style.transform = `scale(${1 + k * .75})`; });
+  for (let i = 0; i < 15; i++) { const e = $('p3b' + i); const h = 1.7 + hk * 9 * Math.abs(Math.sin(lt * 9 + i * .9) * Math.cos(lt * 3.1 + i * .45)); e.style.height = h + 'vw'; e.style.transform = `translateY(${-h / 2}vw)`; e.style.background = hk > .1 ? B : '#cfd6dc'; }
+  const hint = $('p3hint'); hint.textContent = lt < .6 ? 'НАЖМИ И ГОВОРИ' : 'СЛУШАЮ…'; hint.style.color = lt < .6 ? '#afafaf' : B;
+  P3W.forEach((w, i) => { const e = $('p3w' + i); const on = lt >= P3WT[i]; e.style.color = on ? G2 : '#4b4b4b'; e.style.transform = `translateY(${-1.2 * Math.sin(cl((lt - P3WT[i]) / .25) * Math.PI)}vw) scale(${1 + .1 * Math.sin(cl((lt - P3WT[i]) / .25) * Math.PI)})`; });
+  sx($('p3sh'), { y: (1 - spring((lt - 2.25) / .5)) * 40 });
+  const ow = $('p3ow'); sx(ow, { y: Math.sin(lt * 3) * .4 - (lt > 2.3 ? Math.abs(Math.sin((lt - 2.3) * 8)) * 1.6 * (1 - seg(lt, 2.3, 3.1)) : 0) });
+  P.owlLook(ow, 2, held ? 3 : -.5, P.blink(lt + 2));
+  ow.querySelector('.wingR').style.transform = `rotate(${lt > 2.3 ? -25 + Math.sin(lt * 14) * 18 : held ? -12 : 0}deg)`;
+  const b3 = $('p3bt'), pr3 = lt >= 3.35 && lt < 3.47; btn(b3, 'green', pr3); b3.style.transform = `translateY(${pr3 ? 1 : 0}vw)`;
+  touch($('tc3'), lt, P3S);
+}
+
+/* 4. Перевод с клавиатуры: камера наезжает на клавиатуру */
+const KR = [['qwertyuiop', .55, 84], ['asdfghjkl', 3.35, 92], ['zxcvbnm', 8.95, 100]];
+const P4S = 'I love coffee', P4T0 = .35, P4DT = .09, P4ENTER = 1.65, P4OK = P4ENTER + .1, P4NEXT = 2.75;
+const P4F = [tap1(P4NEXT, ...F(47.5, 109))];
+const push4 = (lt) => eio(seg(lt, .12, .5)) - eio(seg(lt, 1.38, 1.62)); // наезд на клавиатуру
+const p4keys = KR.map(([r, x0, y]) => [...r].map((c, i) => `<div class="key" id="p4k-${c}" style="left:${x0 + i * 5.6}vw;top:${y}vw;width:4.9vw">${c}</div>`).join('')).join('') +
+  `<div class="key" id="p4k-sh" style="left:.95vw;top:100vw;width:7.3vw;background:#d9dde2">⇧</div><div class="key" style="left:48.15vw;top:100vw;width:7.3vw;background:#d9dde2">⌫</div>
+   <div class="key" style="left:.7vw;top:108vw;width:9vw;background:#d9dde2;font-size:3vw">123</div><div class="key" id="p4k-sp" style="left:10.4vw;top:108vw;width:30vw"></div>
+   <div class="key" id="p4k-ok" style="left:41.1vw;top:108vw;width:14.6vw;background:${B};color:#fff;box-shadow:0 .5vw 0 ${B2};font-size:3vw;font-weight:900">ГОТОВО</div>`;
+const pg4 = `<div class="ttl">Переведи фразу</div><div class="pz" id="pz4" style="transform-origin:28.2vw 84vw">
+  <div class="abs" id="p4ow" style="left:1.6vw;top:26vw">${owl(20)}</div>
+  <div class="bub" id="p4bb" style="left:23.4vw;top:28.4vw;width:30vw;font-size:5vw;font-weight:900;padding:2.4vw 3vw">Я люблю кофе</div>
+  <div class="inp" id="p4in" style="left:3.4vw;top:48vw;width:49.6vw;height:24vw"><span id="p4ph" style="font-size:4.5vw;color:#afafaf;font-weight:800">Напиши по-английски</span><span id="p4tx"></span><i class="caret" id="p4ca"></i></div>
+  <div class="abs" id="p4kb" style="left:0;right:0;top:82vw;bottom:-3vw;background:#eceff2"></div><div class="abs" id="p4kk" style="left:0;top:0;right:0;bottom:0">${p4keys}</div>
+  <div class="sheet" id="p4sh" style="top:85vw"><div class="shrow"><span class="okc">${ic('check', G, 5.6, { sw: 3.6 })}</span><div><div class="sht">Правильно!</div><div class="shs">I love coffee</div></div></div><div class="btn" id="p4bt" style="left:3.4vw;top:17vw;width:49.6vw;height:10.5vw">ДАЛЕЕ</div></div></div>`;
+const p4id = (c) => (c === ' ' ? 'sp' : c.toLowerCase());
+function up4(lt) {
+  $('pz4').style.transform = `scale(${1 + .1 * push4(lt)})`;
+  const n = cl(Math.floor((lt - P4T0) / P4DT) + 1, 0, P4S.length);
+  $('p4tx').textContent = P4S.slice(0, n); $('p4ph').style.display = n ? 'none' : '';
+  $('p4ca').style.opacity = lt > P4ENTER ? 0 : (n > 0 && lt < P4T0 + P4S.length * P4DT) || Math.floor(lt * 2.6) % 2 === 0 ? 1 : 0;
+  $('p4in').style.borderColor = n ? '#84d8ff' : '#e5e5e5';
+  if (lt >= P4ENTER + .1) { $('p4in').style.borderColor = G; $('p4in').style.background = '#f1ffe6'; } else $('p4in').style.background = '#f7f7f7';
+  document.querySelectorAll('#p4kk .key').forEach((e) => { if (e.id !== 'p4k-ok' && e.id !== 'p4k-sh') { e.style.background = e.id ? '#fff' : '#d9dde2'; e.style.color = INK; e.style.transform = ''; } });
+  const press = (id, a) => { const e = $('p4k-' + id); if (lt >= a && lt < a + .09) { e.style.background = B; e.style.color = '#fff'; e.style.transform = id.length === 1 ? 'translateY(-.7vw) scale(1.15)' : 'translateY(.3vw)'; } };
+  $('p4k-sh').style.background = '#d9dde2'; $('p4k-sh').style.color = INK; $('p4k-sh').style.transform = '';
+  press('sh', P4T0 - .1);
+  [...P4S].forEach((c, i) => press(p4id(c), P4T0 + i * P4DT));
+  const ok = $('p4k-ok'); const okp = lt >= P4ENTER && lt < P4ENTER + .12; ok.style.transform = okp ? 'translateY(.4vw)' : ''; ok.style.boxShadow = `0 ${okp ? .1 : .5}vw 0 ${B2}`;
+  const kd = ei(seg(lt, P4ENTER + .05, P4ENTER + .35)) * 40; sx($('p4kb'), { y: kd }); sx($('p4kk'), { y: kd });
+  sx($('p4sh'), { y: (1 - spring((lt - P4OK) / .5)) * 40 });
+  const ow = $('p4ow'); sx(ow, { y: Math.sin(lt * 3) * .4 - (lt > P4OK + .1 ? Math.abs(Math.sin((lt - P4OK - .1) * 8)) * 1.6 * (1 - seg(lt, P4OK + .1, P4OK + .9)) : 0) });
+  P.owlLook(ow, 2.6, 2.6, P.blink(lt + 2.7));
+  ow.querySelector('.wingL').style.transform = `rotate(${lt > P4OK + .1 ? 25 + Math.sin(lt * 14) * 16 : 0}deg)`;
+  const b4 = $('p4bt'), pr4 = lt >= P4NEXT && lt < P4NEXT + .12; btn(b4, 'green', pr4); b4.style.transform = `translateY(${pr4 ? 1 : 0}vw)`;
+  touch($('tc4'), lt, P4F);
+}
+
+/* 5. Быстрый раунд: комбо */
+const P5W = [['dog', 'собака', 'кошка', 0], ['sun', 'луна', 'солнце', 1], ['book', 'книга', 'ручка', 0], ['red', 'синий', 'красный', 1], ['friend', 'друг', 'дом', 0]];
+const P5T = [.5, .95, 1.4, 1.85, 2.3], P5OX = [15.45, 40.95], OR = '#ff9600', OR2 = '#e07f00';
+const P5S = tapN(P5T.map((t, i) => [t, ...F(P5OX[P5W[i][3]] + 8.5, 85.5)]));
+const P5SW = P5T.slice(0, 4).map((a) => a + .2), P5TD = .24; // смена карточки: старая уезжает влево, новая въезжает справа одновременно
+const pg5 = `<svg class="abs rmask" id="p5ry" style="left:-11.8vw;top:-9vw;opacity:0;z-index:0" width="80vw" height="80vw" viewBox="-50 -50 100 100">${rays(12, '#ffc800', .4, 6)}</svg>
+  <div class="ttl">${ic('bolt', OR, 5.6, { fill: OR, sw: 1.6 })}Быстрый раунд</div>
+  <div class="abs" id="p5cb" style="left:4.2vw;top:21vw;width:48vw;height:20vw;display:flex;align-items:center;justify-content:center;gap:1.6vw;transform-origin:50% 50%">${P.flame(9)}<span id="p5n" style="font-size:13vw;font-weight:900;color:${OR};line-height:1">×0</span></div>
+  <div class="abs" id="p5lb" style="left:0;right:0;top:41.5vw;text-align:center;font-size:4.5vw;font-weight:900;color:${OR};letter-spacing:.1em">ПОДРЯД</div>
+  <div class="card" id="p5cA" style="left:6.2vw;top:48vw;width:44vw;height:22vw"><span></span></div><div class="card" id="p5cB" style="left:6.2vw;top:48vw;width:44vw;height:22vw;opacity:0"><span></span></div>
+  <div class="opt2" id="p5o0" style="left:3.4vw;top:75vw;width:24.1vw;height:12vw"><span></span><span></span></div><div class="opt2" id="p5o1" style="left:28.9vw;top:75vw;width:24.1vw;height:12vw"><span></span><span></span></div>
+  ${P5T.map((_, i) => `<div class="pip" id="p5p${i}" style="left:${3 + i * 10.6}vw;top:98vw"><span style="display:block">${ic('check', '#fff', 4.6, { sw: 3.8 })}</span></div>`).join('')}
+  <div class="abs" id="p5bu" style="left:0;right:0;top:79vw;text-align:center;font-size:10vw;font-weight:900;color:${OR};opacity:0;white-space:nowrap;letter-spacing:.02em">КОМБО!</div>`;
+function up5(lt) {
+  const done = P5T.filter((a) => a <= lt).length;
+  const en = spring((lt - .05) / .45), ex = eio(seg(lt, 2.45, 2.68)); // вход и уход карточек перед «КОМБО!»
+  const kk = P5SW.findIndex((a) => lt >= a && lt < a + P5TD), q = kk >= 0 ? eio((lt - P5SW[kk]) / P5TD) : 0;
+  const cur = kk >= 0 ? kk : Math.min(P5SW.filter((a) => lt >= a + P5TD).length, 4);
+  const cA = $('p5cA'), cB = $('p5cB'), base = cl(en * 2) * (1 - ex), bs = (.9 + .1 * en) * (1 - .3 * ex);
+  cA.firstChild.textContent = P5W[cur][0];
+  cA.style.opacity = base * (1 - q); cA.style.transform = `translateX(${-16 * q}vw) scale(${bs * (1 - .08 * q)}) rotate(${-4 * q}deg)`;
+  if (kk >= 0) { cB.firstChild.textContent = P5W[kk + 1][0]; cB.style.opacity = base * q; cB.style.transform = `translateX(${16 * (1 - q)}vw) scale(${bs * (.92 + .08 * q)}) rotate(${4 * (1 - q)}deg)`; }
+  else cB.style.opacity = 0;
+  [0, 1].forEach((j) => { const e = $('p5o' + j), [sa, sb] = e.children;
+    sa.textContent = P5W[cur][1 + j]; sa.style.opacity = 1 - q;
+    sb.textContent = kk >= 0 ? P5W[kk + 1][1 + j] : ''; sb.style.opacity = q;
+    const tapI = P5T.findIndex((a, i) => lt >= a && lt < a + .19 && P5W[i][3] === j);
+    const s0 = tapI >= 0 ? 1 + .08 * Math.sin(cl((lt - P5T[tapI]) / .2) * Math.PI) : 1;
+    if (tapI >= 0) paint(e, ST.ok); else paint(e, ST.idle);
+    e.style.transform = `translateY(${ex * 4}vw) scale(${s0 * (1 - .06 * Math.sin(q * Math.PI)) * (1 - .3 * ex)})`;
+    e.style.opacity = cl(en * 2) * (1 - ex); });
+  const nEl = $('p5n'); nEl.textContent = '×' + done; nEl.style.color = done ? OR : '#d4d4d4';
+  const lastT = P5T[done - 1] ?? -9, punch = 1 + .35 * Math.exp(-(lt - lastT) * 7) * (done ? 1 : 0);
+  const big = eb(seg(lt, 2.5, 2.95));
+  const cb = $('p5cb'); sx(cb, { o: lt < 2.5 ? 1 : 0, s: (.85 + .15 * en) * punch });
+  const fl = cb.querySelector('.flame'); fl.style.transform = `scale(${.75 + done * .1}) rotate(${Math.sin(lt * 9) * 4}deg)`; fl.style.opacity = done ? 1 : .35;
+  sx($('p5lb'), { o: cl(.4 + done) * (1 - cl(big * 2)) });
+  // шкала: каждый верный ответ зажигает кружок; в финале — волна
+  P5T.forEach((a, i) => { const e = $('p5p' + i), on = lt >= a, k = on ? spring((lt - a) / .35) : 0;
+    const wave = lt > 2.9 ? .14 * Math.max(0, Math.sin(cl((lt - 2.9 - i * .07) / .3) * Math.PI)) : 0;
+    e.style.background = on ? OR : '#fff'; e.style.borderColor = on ? OR2 : '#e5e5e5'; e.style.boxShadow = on ? `0 .8vw 0 ${OR2}` : 'none';
+    e.firstChild.style.opacity = on ? 1 : 0; e.firstChild.style.transform = `scale(${k})`;
+    e.style.transform = `scale(${(on ? .85 + .15 * k : 1) * (1 + wave) * cl(en * 1.5)})`; });
+  sx($('p5bu'), { o: cl((lt - 2.65) / .15), s: lt < 2.65 ? .5 : .5 + .5 * eb(seg(lt, 2.65, 3.0)), y: -Math.abs(Math.sin(Math.max(0, lt - 3.0) * 5)) * 1.2 });
+  const ry = $('p5ry'); ry.style.opacity = big * .9; ry.style.transform = `translateY(${big * 22}vw) rotate(${lt * 40}deg) scale(${.5 + .6 * big})`;
+  // «×5» вырывается за края экрана, лучи — за телефоном
+  const out = eio(seg(lt, DUR[5], DUR[5] + .35)), x5 = $('x5'), xr = $('x5ry');
+  if (lt >= 2.5) {
+    sx(x5, { o: 1 - out, s: punch * (1 + 1.35 * big) * (1 - .4 * out) * (1 + .03 * Math.sin(lt * 9)), y: big * 22, x: -out * 40 });
+    x5.querySelector('.flame').style.transform = `rotate(${Math.sin(lt * 9) * 5}deg)`;
+    xr.style.opacity = big * .95 * (1 - out); xr.style.transform = `rotate(${-lt * 25}deg) scale(${.4 + .75 * big})`;
+  }
+  touch($('tc5'), lt, [P5S]);
+}
+
+/* 6. Итог урока: выученные фразы → опыт, точность, время */
+const ROWS = [['bolt', Y, Y2, 'Опыт', '#d99a00'], ['target', G, G2, 'Точность', G2], ['clock', B, B2, 'Время', B2]];
+const PH = [['Good morning!', 'Доброе утро', B], ['Nice to meet you!', 'Рад знакомству!', V], ['I love coffee', 'Я люблю кофе', Y]];
+const P6IN = [.12, .3, .48], P6COL = 1.15, P6ROW = [1.3, 1.5, 1.7], P6TAP = 2.65;
+const hat = `<svg class="abs" style="left:7.4vw;top:-6.2vw" width="9vw" height="10.5vw" viewBox="0 0 36 42"><path d="M18 1 L33 39 Q18 44 3 39 Z" fill="#ff4b4b"/><path d="M11.5 18 L24.5 18 L27.6 26 L8.4 26Z" fill="#ffc800"/><circle cx="18" cy="2" r="4" fill="#1cb0f6"/></svg>`;
+const pg6 = `<div class="abs" id="p6cf" style="left:0;top:0;width:56.4vw;height:120vw;z-index:4">${P.confetti(46, 21)}</div>
+  <div class="abs" id="p6ow" style="left:17.2vw;top:17vw;width:22vw;height:22vw">${hat}${owl(22)}</div>
+  <div class="abs" id="p6h" style="left:0;right:0;top:41.5vw;text-align:center;font-size:6.6vw;font-weight:900;color:#ff9600;white-space:nowrap">Урок пройден!</div>` +
+  PH.map(([a, b, c], i) => `<div class="pc" id="p6c${i}" style="top:${52.5 + i * 13.5}vw;border-left-color:${c}"><div class="pcp">${a}</div><div class="pct"><span class="pcs">${ic('spk', '#fff', 3.2, { sw: 2.6 })}</span>${b}</div></div>`).join('') +
+  ROWS.map((r, i) => `<div class="row" id="p6r${i}" style="top:${53 + i * 13.5}vw;border-color:${r[1]};box-shadow:0 1vw 0 ${r[2]}"><span class="rb" style="background:${r[1]}">${ic(r[0], '#fff', 4.8, r[0] === 'bolt' ? { fill: '#fff', sw: 1.6 } : { sw: 3 })}</span><span class="rl">${r[3]}</span><span class="rv" id="p6v${i}" style="color:${r[4]}">0</span></div>`).join('') +
+  `<div class="btn" id="p6bt" style="left:3.4vw;top:103.5vw;width:49.6vw;height:11vw;font-size:4vw;letter-spacing:.04em">ЗАБРАТЬ НАГРАДУ</div>`;
+const P6S = [tap1(P6TAP, ...F(50.5, 110.5))];
+function up6(lt) {
+  P.cfUpdate($('p6cf'), lt - .1, 28, 26, 70);
+  const ow = $('p6ow'); sx(ow, { s: spring((lt - .05) / .55), y: -Math.abs(Math.sin(lt * 6)) * 2 });
+  P.owlLook(ow, 0, 1, P.blink(lt + .3));
+  ow.querySelector('.wingL').style.transform = `rotate(${22 + Math.sin(lt * 13) * 18}deg)`; ow.querySelector('.wingR').style.transform = `rotate(${-22 - Math.sin(lt * 13) * 18}deg)`;
+  const h = spring((lt - .2) / .5); sx($('p6h'), { o: cl(h * 2), s: .6 + .4 * h });
+  // фразы урока въезжают по одной, затем «складываются» в строку опыта
+  PH.forEach((_, i) => { const k = spring((lt - P6IN[i]) / .45), c = eio(seg(lt, P6COL + i * .05, P6COL + .25 + i * .05));
+    sx($('p6c' + i), { o: cl(k * 2) * (1 - c), x: (1 - k) * 30, y: -i * 13.5 * c, s: 1 - .25 * c }); });
+  ROWS.forEach((r, i) => { const k = spring((lt - P6ROW[i]) / .45); sx($('p6r' + i), { o: cl(k * 2), y: (1 - k) * 6, s: .85 + .15 * k }); });
+  const c = (a, b, t0) => lerp(a, b, eo(seg(lt, t0, t0 + .6)));
+  $('p6v0').textContent = '+' + Math.round(c(0, 45, P6ROW[0] + .05)) + ' XP';
+  $('p6v1').textContent = Math.round(c(0, 96, P6ROW[1] + .05)) + '%';
+  $('p6v2').textContent = fmt(c(0, 298, P6ROW[2] + .05));
+  // кнопка видна сразу (серая), загорается, когда посчитаны итоги
+  const bt = $('p6bt'), press = lt >= P6TAP && lt < P6TAP + .12, bk = spring((lt - .55) / .5), on = lt >= 2.0, onk = 1 + .08 * Math.sin(Math.PI * seg(lt, 2.0, 2.25));
+  btn(bt, on ? 'green' : 'off', press); bt.style.opacity = cl(bk * 2); bt.style.transform = `translateY(${press ? 1 : (1 - bk) * 6}vw) scale(${onk * (1 + (lt > 2.3 && lt < P6TAP ? .035 * Math.sin((lt - 2.3) * 14) : 0))})`;
+  touch($('tc6'), lt, P6S);
+}
+
+const PAGES = [['pg1', pg1, up1], ['pg2', pg2, up2], ['pg3', pg3, up3], ['pg4', pg4, up4], ['pg5', pg5, up5], ['pg6', pg6, up6]];
+const HCLIP = ['polygon(0 0,52% 0,44% 30%,57% 50%,45% 70%,50% 100%,0 100%)', 'polygon(52% 0,100% 0,100% 100%,50% 100%,45% 70%,57% 50%,44% 30%)'];
+const hrt = () => ic('heart', R, 4.6, { fill: R, sw: 1 });
+const SCREEN = `<div class="hdr"><div class="abs" style="left:2.8vw;top:6.2vw">${ic('x', '#afafaf', 4.6, { sw: 3.2 })}</div>
+  <div class="pbar" style="left:10vw;top:6.8vw;width:34.4vw;height:3.6vw"><i id="pfill"></i></div>
+  <div class="abs" style="left:46.4vw;top:6.1vw;display:flex;align-items:center;gap:.6vw;font-size:4.4vw;font-weight:900;color:${R}">
+    <span style="position:relative;display:block;width:4.6vw;height:4.6vw"><span class="abs" id="hrF" style="left:0;top:0">${hrt()}</span>
+    <span class="abs" id="hrL" style="left:0;top:0;opacity:0;clip-path:${HCLIP[0]}">${hrt()}</span><span class="abs" id="hrR" style="left:0;top:0;opacity:0;clip-path:${HCLIP[1]}">${hrt()}</span></span>
+    <span id="hrN" style="display:inline-block">5</span></div></div>` +
+  PAGES.map(([id, h]) => `<div class="pg" id="${id}">${h}</div>`).join('');
+const DONE_AT = [S[1] + P1DONE, S[2] + 2.35, S[3] + 2.25, S[4] + P4OK, S[5] + 2.3];
+const HB = S[1] + P1BAD; // ошибка в парах: сердце раскалывается, 5 → 4
+
+/* ===================== ТАЙМЕР (через весь ролик) ===================== */
+const CIRC = 2 * Math.PI * 44;
+const TIMER = `<div id="tmr"><div id="tpill"></div>
+  <svg id="tring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="#e5e5e5" stroke-width="9"/>
+  ${EX.map((c, k) => `<circle id="ta${k}" cx="50" cy="50" r="44" fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round" transform="rotate(-90 50 50)"/>`).join('')}</svg>
+  <div id="tchk">${ic('check', G, 6.4, { sw: 3.8 })}</div><div id="tdig">5:00</div>
+  <div class="tsh" id="tsh0">${STAR}</div><div class="tsh" id="tsh1">${STAR}</div></div>`;
+const KP = [[1.7, 300], [S[1], 292], [S[2], 240], [S[3], 180], [S[4], 120], [S[5], 60], [DONE_AT[4], 2]];
+const lessonSec = (t) => { if (t <= KP[0][0]) return 300; for (let i = 1; i < KP.length; i++) if (t <= KP[i][0]) return lerp(KP[i - 1][1], KP[i][1], (t - KP[i - 1][0]) / (KP[i][0] - KP[i - 1][0])); return 2; };
+const secAt = (t) => (t < S[8] + .4 ? lessonSec(t) : lerp(2, 300, eio(seg(t, S[8] + .4, S[8] + 1.3))));
+const FCY = 91; // центр кольца в финале
+const LAY = { hook: [50, 64, 1, 50, 64, 1], corner: [67.5, 11.5, 9.6 / 62, 84.3, 11.6, .35], fin: [50, FCY, .56, 50, FCY, .44] };
+function drawTimer(t) {
+  const sec = secAt(t), r = sec / 300;
+  let L, op = 1, pill = 0;
+  if (t < 1.95) L = LAY.hook;
+  else if (t < S[7]) { const k = eio(seg(t, 1.95, 2.55)); L = LAY.hook.map((v, i) => lerp(v, LAY.corner[i], k)); pill = k; }
+  else if (t < S[8]) L = LAY.corner;
+  else L = LAY.fin;
+  // уход перед сундуком и возврат в финале
+  const out = ei(seg(t, S[7] - .3, S[7]));
+  let dy = 0, sc = 1;
+  if (t < S[8]) { op = 1 - out; dy = -out * 16; }
+  else { const k = spring((t - S[8] - .15) / .6); op = cl(k * 2); sc = k; pill = 0; }
+  // появление в начале: дуги уже растут в кадре 0
+  const g = (k) => eo(seg(t, -.2 + k * .1, .1 + k * .1));
+  const grow = t < 1 ? [0, 1, 2, 3, 4].map(g) : [1, 1, 1, 1, 1];
+  const from = 360 * (1 - r);
+  EX.forEach((c, k) => { const a0 = 72 * k + 12, a1 = a0 + 48 * grow[k], s = Math.max(a0, from), len = a1 - s, e = $('ta' + k);
+    e.style.opacity = len > .3 ? 1 : 0; e.setAttribute('stroke-dasharray', `${(Math.max(0, len) / 360 * CIRC).toFixed(2)} ${CIRC.toFixed(2)}`); e.setAttribute('stroke-dashoffset', (-s / 360 * CIRC).toFixed(2)); });
+  const done = t >= DONE_AT[4] && t < S[8], urgent = sec < 15 && !done && t < S[8];
+  const bounce = 1 + .06 * Math.sin(cl((t - 1.5) / .32) * Math.PI);
+  const breath = t >= S[8] + 1.3 ? 1 + .025 * Math.sin((t - S[8]) * 5) : 1;
+  const tr = $('tring'); tr.style.opacity = op * (done ? 1 - seg(t, DONE_AT[4], DONE_AT[4] + .2) : 1);
+  tr.style.transform = `translate(${L[0] - 31}vw,${L[1] - 31 + dy}vw) scale(${L[2] * sc * bounce})`;
+  const dg = $('tdig'); dg.textContent = fmt(sec);
+  const pulse = urgent ? 1 + .1 * Math.abs(Math.sin(t * 12)) : done ? 1 + .18 * Math.exp(-(t - DONE_AT[4]) * 6) : 1;
+  const dpop = t < 1 ? spring((t + .12) / .5) : 1;
+  dg.style.opacity = op; dg.style.color = done ? '#fff' : urgent ? R : INK;
+  dg.style.transform = `translate(${L[3] - 30}vw,${L[4] - 13 + dy}vw) scale(${L[5] * sc * pulse * dpop * bounce * breath})`;
+  const pl = $('tpill'); pl.style.opacity = pill * op; pl.style.background = done ? G : urgent ? '#fff0f0' : '#fff';
+  pl.style.boxShadow = `0 1vw 0 ${done ? G2 : urgent ? '#ffc1c1' : 'rgba(0,0,0,.1)'}`; pl.style.transform = `translateY(${dy}vw) scale(${done ? 1 + .06 * Math.exp(-(t - DONE_AT[4]) * 6) : 1})`;
+  const ck = $('tchk'), ckk = done ? spring((t - DONE_AT[4]) / .45) : 0; ck.style.opacity = cl(ckk * 2) * op; ck.style.transform = `translateY(${dy}vw) scale(${ckk})`;
+  // финал: две искорки бегут по кольцу — живой элемент на удержании
+  [0, 1].forEach((j) => { const e = $('tsh' + j), on = t >= S[8] + 1.25;
+    if (!on) { e.style.opacity = 0; return; }
+    const lt = t - S[8] - 1.25, a = lt * 2.3 + j * Math.PI, rr = 15.3;
+    e.style.opacity = cl(lt / .25) * (.65 + .35 * Math.sin(lt * 9 + j * 2));
+    e.style.transform = `translate(${50 + Math.sin(a) * rr}vw,${FCY - Math.cos(a) * rr}vw) scale(${(j ? .7 : 1) * (.8 + .25 * Math.sin(lt * 7 + j))}) rotate(${lt * 90}deg)`; });
+}
+
+/* ===================== ТЕЛЕФОН (через весь урок) ===================== */
+const LESSON = `<div id="lsn" class="abs" style="left:0;top:0;width:100vw;height:178vw;z-index:40;transform-origin:50vw 81vw">
+  <svg class="abs rmask" id="x5ry" style="left:-25vw;top:-.2vw;opacity:0" width="150vw" height="150vw" viewBox="-50 -50 100 100">${rays(18, '#ffc800', .6, 4)}</svg>
+  ${P.phone(60, SCREEN, 'left:20vw;top:20vw')}
+  <div class="abs" id="x5" style="left:26vw;top:42.8vw;width:48vw;height:20vw;display:flex;align-items:center;justify-content:center;gap:1.6vw;opacity:0;transform-origin:50% 50%;z-index:2">${P.flame(9)}<span style="font-size:13vw;font-weight:900;color:${OR};line-height:1;text-shadow:0 .9vw 0 ${OR2},0 0 2.4vw rgba(255,255,255,.95)">×5</span></div>
+  ${[1, 2, 3, 4, 5, 6].map((i) => `<div class="abs" id="tc${i}" style="left:0;top:0;width:100vw;height:178vw;z-index:3">${P.tapHTML()}</div>`).join('')}</div>`;
+// ракурс телефона по страницам: [dx, dy, наклон, масштаб]; масштаб — вокруг низа телефона (не наезжает на субтитры)
+const POSE = [[0, 0, 0, 1], [-1.4, 0, -2, 1], [0, 0, 0, 1], [1.4, 0, 2, 1], [0, 0, 0, 1], [0, 0, 0, 1]];
+function poseAt(t) {
+  let p = POSE[0];
+  for (let i = 1; i < POSE.length; i++) { const k = eio(seg(t, S[i + 1] - .1, S[i + 1] + .5)); if (k > 0) p = p.map((v, j) => lerp(v, POSE[i][j], k)); }
+  let sw = 0; for (let i = 2; i <= 6; i++) sw += Math.sin(Math.PI * seg(t, S[i], S[i] + .45)); // «камера» догоняет перелистывание
+  const ps = p[3] * (1 + .06 * push3(t - S[3]));
+  return [p[0] - 2.2 * sw, p[1], p[2] - .8 * sw, ps];
+}
+function drawLesson(t) {
+  const L = $('lsn'); const vis = t > 2.15 && t < S[7] + .2;
+  L.style.display = vis ? '' : 'none'; if (!vis) return;
+  const ent = eo(seg(t, 2.2, 2.85)), land = Math.exp(-(t - 2.85) * 9) * Math.sin(Math.max(0, t - 2.85) * 26) * (t > 2.85 ? 1 : 0), ex = ei(seg(t, S[7] - .34, S[7] + .1));
+  const pre = Math.sin(cl((t - S[7] + .5) / .16) * Math.PI) * (t < S[7] - .34 ? 1 : 0); // «вдох» перед уходом
+  const [px, py, pr, ps] = poseAt(t);
+  L.style.opacity = 1 - seg(ex, .7, 1);
+  L.style.transform = `translate(${px}vw,${(1 - ent) * 135 + Math.sin(t * 1.3) * .35 + land * .8 - ex * 6 + py + (1 - ps) * 62}vw) rotate(${(1 - ent) * 4 - ex * 25 + pr}deg) scale(${(1 + .012 * Math.sin(t * .8)) * (1 - land * .012) * (1 + .03 * pre) * (1 - .92 * ex) * ps})`;
+  document.querySelectorAll('#lsn > .abs > .tp, #lsn > .abs > .tr').forEach((e) => (e.style.opacity = 0));
+  $('x5').style.opacity = 0; $('x5ry').style.opacity = 0;
+  $('pfill').style.width = DONE_AT.reduce((a, c) => a + 20 * eo(seg(t, c, c + .45)), 0) + '%';
+  // сердце в шапке: раскалывается на ошибке и остаётся «4»
+  const kb = eo(seg(t, HB, HB + .6)), hv = t >= HB && t < HB + .6 ? 1 - seg(t, HB + .3, HB + .6) : 0, fall = kb * 3.2 - Math.sin(kb * Math.PI) * 1.6;
+  sx($('hrL'), { o: hv, x: -kb * 2.6, y: fall, r: -kb * 40, s: 1 - kb * .2 }); sx($('hrR'), { o: hv, x: kb * 2.6, y: fall, r: kb * 40, s: 1 - kb * .2 });
+  const hb = t < HB ? 1 : spring((t - HB - .3) / .45); sx($('hrF'), { o: t < HB ? 1 : cl(hb * 2), s: hb });
+  const hn = $('hrN'); hn.textContent = t < HB + .1 ? '5' : '4'; hn.style.transform = `scale(${1 + .6 * Math.exp(-(t - HB - .1) * 7) * (t > HB + .1 ? 1 : 0)})`;
+  PAGES.forEach(([id, , up], i) => {
+    const s = S[i + 1], e = S[i + 2], el = $(id);
+    const last = i === PAGES.length - 1;
+    const on = (i === 0 ? t > 2.1 : t >= s) && (last || t < e + .4);
+    el.style.display = on ? '' : 'none'; if (!on) return;
+    const kin = i === 0 ? 1 : eio(seg(t, s, s + .4)), kout = last ? 0 : eio(seg(t, e, e + .4));
+    el.style.transform = `translateX(${(1 - kin) * 100 - kout * 100}%)`;
+    up(t - s);
+  });
+}
+
+/* ===================== 3D: сундук-награда ===================== */
+let V7 = null; const CH = {};
+const GEMC = [B, R, G, Y, V];
+// самоцвет с огранкой: площадка, двухъярусная корона, рундист, двухъярусный павильон
+function makeGem(c) {
+  const T = THREE, g = new T.Group(), n = 10;
+  const col = new T.Color(c), hi = col.clone().lerp(new T.Color('#ffffff'), .16), dk = col.clone().multiplyScalar(.4);
+  const base = { flatShading: true, roughness: .04, metalness: .22, clearcoat: 1, clearcoatRoughness: .03, iridescence: .2, iridescenceIOR: 1.3, specularIntensity: 1, envMapIntensity: .7 };
+  const mTop = new T.MeshPhysicalMaterial({ ...base, color: hi, emissive: dk, emissiveIntensity: .2 });
+  const mPav = new T.MeshPhysicalMaterial({ ...base, color: col, emissive: dk, emissiveIntensity: .45 });
+  const c1 = new T.CylinderGeometry(.56, .8, .17, n, 1); c1.translate(0, .335, 0);
+  const c2 = new T.CylinderGeometry(.8, 1, .21, n, 1); c2.rotateY(Math.PI / n); c2.translate(0, .145, 0);
+  const gd = new T.CylinderGeometry(1, 1, .04, n * 2, 1); gd.translate(0, .02, 0);
+  const p1 = new T.CylinderGeometry(1, .55, .38, n, 1); p1.rotateY(Math.PI / n); p1.translate(0, -.19, 0);
+  const p2 = new T.ConeGeometry(.55, .78, n, 1); p2.rotateX(Math.PI); p2.translate(0, -.77, 0);
+  [c1, c2, gd].forEach((q) => g.add(new T.Mesh(q, mTop))); [p1, p2].forEach((q) => g.add(new T.Mesh(q, mPav)));
+  g.children.forEach((m) => { m.castShadow = true; });
+  return g;
+}
+function buildChest(v) {
+  const T = THREE, Wd = 1.6, Hb = .9, D = 1.0, Hi = Hb - .1;
+  const purple = E3D.mat('glossy', '#8340e6'), gold = E3D.mat('gold', '#ffc93c');
+  const goldDS = gold.clone(); goldDS.side = T.DoubleSide;
+  const g = CH.g = new T.Group(); v.add(g);
+  // корпус ниже кромки: внутри видно светящееся «дно», без совпадающих граней
+  const body = E3D.box(Wd, Hi, D, { mat: purple, r: .08 }); body.position.y = Hi / 2; g.add(body);
+  [1, -1].forEach((s) => { const b = E3D.box(Wd + .05, .12, .1, { mat: gold, r: .03 }); b.position.set(0, Hb - .06, s * (D / 2 - .04)); g.add(b); });
+  [1, -1].forEach((s) => { const b = E3D.box(.1, .12, D + .05, { mat: gold, r: .03 }); b.position.set(s * (Wd / 2 - .04), Hb - .06, 0); g.add(b); });
+  // ремни — только по передней и задней стенкам
+  [-.5, .5].forEach((x) => [1, -1].forEach((s) => { const b = E3D.box(.17, Hi - .02, .04, { mat: gold, r: .015 }); b.position.set(x, Hi / 2, s * (D / 2 + .015)); g.add(b); }));
+  const lock = E3D.box(.32, .36, .1, { mat: gold, r: .05 }); lock.position.set(0, Hb - .27, D / 2 + .05); g.add(lock);
+  const hole = E3D.cylinder(.045, .06, { color: '#3a2266', kind: 'matte' }); hole.rotation.x = Math.PI / 2; hole.position.set(0, Hb - .29, D / 2 + .1); g.add(hole);
+  CH.glowMat = E3D.mat('emissive', '#ffd84a'); CH.glowMat.emissiveIntensity = 0;
+  const glow = new T.Mesh(new T.BoxGeometry(Wd - .2, .02, D - .2), CH.glowMat); glow.position.y = Hi + .01; g.add(glow);
+  // монетки на дне
+  [[-.42, .12, .3], [-.18, -.15, -.2], [.1, .16, .5], [.36, -.1, -.4], [.55, .18, .1], [-.6, -.18, .7], [.02, -.02, 1.1]].forEach(([x, z, r]) => { const m = E3D.cylinder(.1, .03, { mat: gold }); m.position.set(x, Hi + .04, z); m.rotation.set(r * .25, 0, r * .3); g.add(m); });
+  CH.light = new T.PointLight('#ffd84a', 0, 5, 1.6); CH.light.position.set(0, Hb + .35, .15); g.add(CH.light);
+  const lidG = CH.lid = new T.Group(); lidG.position.set(0, Hb, -D / 2); g.add(lidG);
+  const shell = new T.CylinderGeometry(D / 2, D / 2, Wd, E3D.seg(56), 1, false, 0, Math.PI); shell.rotateZ(Math.PI / 2);
+  const lid = new T.Mesh(shell, purple); E3D.shade(lid); lid.scale.set(1, .72, 1); lid.position.set(0, 0, D / 2); lidG.add(lid);
+  // изнанка крышки темнее, чтобы открытый сундук не «выцветал» от свечения
+  const inner = E3D.mat('matte', '#3f1c86'); inner.side = T.BackSide;
+  const lidIn = new T.Mesh(shell, inner); lidIn.scale.set(.985, .7, .985); lidIn.position.set(0, 0, D / 2); lidG.add(lidIn);
+  [-.5, .5].forEach((x) => { const bg = new T.CylinderGeometry(D / 2 + .03, D / 2 + .03, .17, E3D.seg(44), 1, true, 0, Math.PI); bg.rotateZ(Math.PI / 2); const m = new T.Mesh(bg, goldDS); E3D.shade(m); m.scale.set(1, .72, 1); m.position.set(x, 0, D / 2); lidG.add(m); });
+  const lip = E3D.box(Wd + .05, .09, .1, { mat: gold, r: .03 }); lip.position.set(0, .03, D + .01); lidG.add(lip);
+  const hasp = E3D.box(.24, .2, .09, { mat: gold, r: .04 }); hasp.position.set(0, -.02, D + .05); lidG.add(hasp);
+  CH.gems = GEMC.map((c) => { const m = makeGem(c); m.visible = false; v.add(m); return m; });
+  CH.cf = v.add(E3D.confetti(70, { at: 1.5, origin: [0, 1.0, 0], seed: 9, colors: [G, Y, B, R, V, '#ff9600'] }));
+  CH.p = new THREE.Vector3();
+}
+const GSP = [2.2, 2.34, 2.48, 2.62, 2.76]; // блики-звёздочки на гранях
+const proj = (v, x, y, z) => { CH.p.set(x, y, z).project(v.camera); return [(CH.p.x + 1) * 50, (1 - CH.p.y) * 88.9]; };
+function chestUpd(t, $s, $$) {
+  const v = V7; if (!v) return;
+  const g = CH.g, Hb = .9;
+  const fall = cl(t / .45), y = t < .45 ? 3.4 * (1 - fall * fall) : 0;
+  const sq = t > .45 ? Math.exp(-(t - .45) * 8) * Math.sin((t - .45) * 20) : 0;
+  const shake = cl((t - .8) / .4) * (t < 1.45 ? 1 : 0);
+  g.position.set(0, y, 0);
+  g.scale.set(1 + .1 * sq, 1 - .14 * sq, 1 + .1 * sq);
+  g.rotation.set(0, -.25 + .12 * smooth(seg(t, 0, 3)), Math.sin(t * 42) * .045 * shake);
+  const open = spring((t - 1.45) / .7);
+  CH.lid.rotation.x = -(open * 1.95 + shake * .12 * Math.abs(Math.sin(t * 30)));
+  CH.glowMat.emissiveIntensity = 1.8 * open + shake * .8;
+  CH.light.intensity = 5 * open + shake * 1.5;
+  CH.gems.forEach((m, i) => { const a = 1.55 + i * .07, k = seg(t, a, a + .65); m.visible = t > a;
+    const tx = (i - 2) * .52, ty = 2.5 + .3 * (1 - Math.abs(i - 2) / 2);
+    const kk = eb(k), s = .22 * (.35 + .65 * eo(k));
+    m.position.set(lerp(0, tx, kk), lerp(Hb, ty, kk) + Math.sin(t * 3 + i) * .05 * k, lerp(0, .25, kk));
+    m.rotation.set(.38, t * 2.2 + i * 1.3, Math.sin(t * 1.7 + i) * .1); m.scale.setScalar(s); });
+  v.orbit({ target: [0, 1.35, 0], radius: lerp(11.6, 10.6, eo(seg(t, 0, 3))), angle: lerp(-20, -8, smooth(seg(t, 0, 3))), height: lerp(2.3, 1.8, smooth(seg(t, 0, 3))) });
+  v.camera.updateMatrixWorld();
+  const [px, py] = proj(v, 0, 1.1, 0), [gx, gy] = proj(v, 0, 0, 0);
+  const ry = $s('#cry'), gl = $s('#cgl');
+  ry.style.transform = `translate(${px - 80}vw,${py - 80}vw) rotate(${t * 22}deg) scale(${.35 + .75 * open})`; ry.style.opacity = .15 + .75 * open;
+  gl.style.transform = `translate(${px - 40}vw,${py - 40}vw) scale(${.3 + .9 * open + .4 * shake})`; gl.style.opacity = cl(.25 * open + .3 * shake);
+  // мягкая тень-пятно на 2D-фоне: меньше и светлее, пока сундук в воздухе
+  const hk = cl(y / 3.4); sx($s('#csh'), { o: .9 - .65 * hk, x: gx - 30, y: gy - 6, s: (1 - .45 * hk) * (1 + .08 * sq) });
+  const bd = spring((t - .3) / .45), bp = 1 + .12 * Math.sin(Math.PI * seg(t, 2.3, 2.55)); sx($s('#cbd'), { o: cl(bd * 2), s: (.5 + .5 * bd) * bp, y: Math.sin(t * 4) * .5 });
+  $s('#cbn').textContent = '+' + E.count(0, 20, t, 1.6, 2.35);
+  $$('.gsp').forEach((e, i) => { const m = CH.gems[i], k = seg(t, GSP[i], GSP[i] + .4), vv = Math.sin(k * Math.PI);
+    if (k <= 0 || k >= 1) { e.style.opacity = 0; return; }
+    const [sx2, sy2] = proj(v, m.position.x + .1, m.position.y + .08, m.position.z + .2);
+    e.style.opacity = vv; e.style.transform = `translate(${sx2}vw,${sy2}vw) scale(${.3 + vv}) rotate(${k * 90}deg)`; });
+  v.render(t);
+}
+
+/* ===================== СЦЕНЫ ===================== */
+const hookChips = ['pairs', 'phones', 'mic', 'kbd', 'bolt'];
+const HW = [...'Успеешь?'], HC = [R, G, B, V, Y], HC2 = [R2, G2, B2, V2, Y2], HA = (i) => -.3 + i * .055;
+const kickIn = ($s, t, d = .3) => { const e = $s('.kick'); if (!e) return; const k = spring((t - d) / .45); e.style.opacity = cl(k * 2); e.style.transform = `translateX(${(1 - k) * -5}vw) scale(${.85 + .15 * k})`; };
+// перенос строки субтитра перед словом (без «висящих» предлогов)
+const capBreak = (el, word) => { const cap = el.parentNode.querySelector('.cap'), w = cap && [...cap.querySelectorAll('.w')].find((s) => s.textContent === word); if (w) cap.insertBefore(document.createElement('br'), w); };
+const lessonScene = (i, o) => ({ dur: DUR[i], ink: INK, trans: 'fade', ...o,
+  html: (o.html || '') + deco(EX[(i - 1) % 5]),
+  mount(el) { if (o.brk) capBreak(el, o.brk); },
+  update(t, $s, p, $$) { decoUpd($$, t); kickIn($s, t); } });
+const WM = [...'duolingo'], WA = (i) => .3 + i * .06, FTAP = 2.0;
+
+E.run({ hl: G, progress: false, trans: .35,
+  music: { style: 'lofi', from: 0, drums: 1.55, bpm: 100, gain: .42 },
+  scenes: [
+  /* 0. ХУК: 5 минут, 5 заданий, СТАРТ */
+  { dur: DUR[0], bg: 'radial-gradient(120% 80% at 50% 38%, #ffffff 45%, #eaf8dc)', ink: INK, hl: G, cap: '*5 минут* — 5 заданий. Засекаем!', capAt: .3,
+    html: `${K('!', '#ff9600', 'Вызов дня')}
+      <div class="abs" id="hh" style="left:0;right:0;top:15vw;text-align:center;font-size:13.5vw;font-weight:900;letter-spacing:-.01em;white-space:nowrap">${HW.map((c, i) => `<span class="lt" style="color:${HC[i % 5]};text-shadow:0 1.1vw 0 ${HC2[i % 5]}">${c}</span>`).join('')}</div>
+      ${hookChips.map((n, k) => `<div class="abs hc" id="hc${k}" style="left:${17.75 + k * 13.5}vw;top:101vw;width:10.5vw;height:10.5vw;border-radius:3vw;background:${EX[k]};box-shadow:0 1vw 0 ${EX2[k]};display:grid;place-items:center">${ic(n, '#fff', 6.2, n === 'bolt' ? { fill: '#fff', sw: 1.6 } : { sw: 2.6 })}</div>`).join('')}
+      <div class="btn" id="hb" style="left:20vw;top:118vw;width:60vw;height:13vw;font-size:6vw">СТАРТ</div>
+      <div class="abs" id="htc" style="left:0;top:0;width:100vw;height:178vw;z-index:30">${P.tapHTML()}</div>`,
+    sfx: [[0, 'pop', { gain: .35 }], ...HW.map((_, i) => [HA(i) + .08, 'pop', { gain: .3, pan: -.5 + i * .14 }]).filter((c) => c[0] > .04), ...[0, 1, 2, 3, 4].map((k) => [.05 + k * .1, 'pop', { gain: .16, pan: -.4 + k * .2 }]), [.85, 'pop', { gain: .45 }], [1.5, 'click', { gain: .8 }], [1.62, 'tick', { gain: .7 }], [1.95, 'whoosh', { gain: .45 }], [2.25, 'whoosh', { gain: .3, pan: .2 }]],
+    update(t, $s) {
+      kickIn($s, t, -.1);
+      const away = ei(seg(t, 1.95, 2.4)), hAway = ei(seg(t, 1.8, 2.1));
+      sx($s('#hh'), { o: 1 - hAway, s: 1 - .2 * hAway, r: Math.sin(t * 3) * 1.2, y: -hAway * 10 });
+      $s('#hh').querySelectorAll('.lt').forEach((e, i) => { const k = spring((t - HA(i)) / .5), bob = t > .8 ? Math.max(0, Math.sin((t - .8 - i * .05) * 6)) * .9 : 0;
+        e.style.opacity = cl(k * 4); e.style.transform = `translateY(${(1 - k) * -20 - bob}vw) scale(${.4 + .6 * k}) rotate(${(1 - k) * (i % 2 ? 16 : -16)}deg)`; });
+      hookChips.forEach((n, k) => { const c = spring((t + .05 - k * .1) / .45), a = ei(seg(t, 1.95 + k * .03, 2.35 + k * .03)); sx($s('#hc' + k), { o: cl(c * 2) * (1 - a), s: c, y: a * 50 + Math.sin(t * 4 + k) * .5 }); });
+      const b = $s('#hb'), press = t >= 1.5 && t < 1.62, bk = spring((t - .85) / .45);
+      btn(b, 'green', press); b.style.opacity = cl(bk * 2) * (1 - away); b.style.transform = `translateY(${(press ? 1 : 0) + away * 40}vw) scale(${bk * (1 + (t > 1 && t < 1.5 ? .03 * Math.sin((t - 1) * 14) : 0))})`;
+      touch($s('#htc'), t, [tap1(1.5, 71, 126)]);
+      $s('#hh').closest('section').querySelector('.cap').style.opacity = 1 - seg(t, 1.9, 2.2);
+    } },
+  /* 1. ПАРЫ */
+  lessonScene(1, { bg: 'linear-gradient(180deg,#f1fce6,#d7f5bf)', hl: G, html: K('1/5', G, 'Пары'), cap: 'Минута 1 — собираешь *пары* слов', capAt: .45,
+    sfx: [...P1T.map(([t]) => [t, 'click', { gain: .55 }]), ...P1B.map(([t], i) => [t + .02, 'chime', { gain: .32 + i * .04, pan: i % 2 ? .3 : -.3 }]), [P1BAD, 'thud', { gain: .55 }], [P1BAD + .32, 'pop', { gain: .3, pan: .3 }], [P1DONE, 'pop', { gain: .45 }], [P1DONE + .05, 'sparkle', { gain: .3 }]] }),
+  /* 2. АУДИРОВАНИЕ */
+  lessonScene(2, { bg: 'linear-gradient(180deg,#ecf8ff,#cbedfe)', hl: B, html: K('2/5', B, 'Аудирование'), cap: 'Минута 2 — слушаешь и *понимаешь*', capAt: .4, brk: 'слушаешь',
+    sfx: [[0, 'whoosh', { gain: .3 }], [.5, 'click', { gain: .6 }], [.56, 'chime', { gain: .28 }], [.78, 'pop', { gain: .22, pan: -.2 }], [1.0, 'pop', { gain: .2 }], [1.24, 'pop', { gain: .22, pan: .2 }], [1.75, 'click', { gain: .55 }], [2.25, 'click', { gain: .6 }], [2.35, 'success', { gain: .55 }], [3.35, 'click', { gain: .6 }], [3.72, 'whoosh', { gain: .25, pan: .3 }]] }),
+  /* 3. ГОВОРЕНИЕ */
+  lessonScene(3, { bg: 'linear-gradient(180deg,#f8f0ff,#e8d3ff)', hl: V2, html: K('3/5', V2, 'Говорение'), cap: 'Минута 3 — говоришь *вслух*', capAt: .4,
+    sfx: [[0, 'whoosh', { gain: .3 }], [.45, 'whoosh', { gain: .18, pan: -.2 }], [.6, 'click', { gain: .6 }], [.62, 'swell', { dur: 1.6, gain: .14 }], ...P3WT.map((t, i) => [t, 'pop', { gain: .32, pan: -.3 + i * .2 }]), [2.05, 'whoosh_down', { gain: .16 }], [2.25, 'success', { gain: .55 }], [3.35, 'click', { gain: .6 }], [3.72, 'whoosh', { gain: .25, pan: .3 }]] }),
+  /* 4. ПЕРЕВОД */
+  lessonScene(4, { bg: 'linear-gradient(180deg,#fffae6,#ffeeb0)', hl: Y, hlInk: INK, html: K('4/5', Y2, 'Перевод'), cap: 'Минута 4 — *переводишь* сам', capAt: .35,
+    sfx: [[0, 'whoosh', { gain: .3 }], [P4T0 - .1, 'key', { gain: .35 }], ...[...P4S].map((c, i) => [P4T0 + i * P4DT, c === ' ' ? 'key_space' : 'key', { gain: .45, pan: -.3 + (i % 5) * .15 }]), [P4ENTER, 'key_enter', { gain: .6 }], [P4OK, 'success', { gain: .55 }], [P4NEXT, 'click', { gain: .6 }], [DUR[4] - .08, 'whoosh', { gain: .25, pan: .3 }]] }),
+  /* 5. КОМБО */
+  lessonScene(5, { bg: 'linear-gradient(180deg,#fff2f0,#ffd6d2)', hl: R, html: K('5/5', R, 'Быстрый раунд'), cap: 'Минута 5 — пять верных *подряд*', capAt: .4,
+    sfx: [[0, 'whoosh', { gain: .3 }], ...P5T.map((t) => [t, 'click', { gain: .5 }]), ...P5T.map((t, i) => [t + .02, 'chime', { gain: .28 + i * .06, pan: P5W[i][3] ? .3 : -.3 }]), ...P5SW.map((t) => [t, 'whoosh', { gain: .1, pan: -.2 }]), [2.45, 'whoosh_down', { gain: .25 }], [2.52, 'bass', { gain: .55 }], [2.66, 'success', { gain: .5 }], [2.7, 'sparkle', { gain: .5 }], [2.95, 'pop', { gain: .3 }], [3.05, 'pop', { gain: .3, pan: .2 }]] }),
+  /* 6. ИТОГ */
+  { dur: DUR[6], bg: 'radial-gradient(circle at 50% 42%, #fff7cf, #ffdf6b)', ink: INK, hl: G, trans: 'fade', html: K('✓', G, 'Итог урока') + deco('#ffffff'), cap: 'Урок пройден за *4:58* — успел!', capAt: .1,
+    sfx: [[0, 'whoosh', { gain: .3 }], [.1, 'success', { gain: .6 }], [.15, 'sparkle', { gain: .4 }], ...P6IN.map((t, i) => [t + .1, 'pop', { gain: .4, pan: .3 - i * .1 }]), [P6COL, 'whoosh_down', { gain: .3 }], ...P6ROW.map((t) => [t + .05, 'pop', { gain: .4 }]), [.55, 'pop', { gain: .2 }], [2.0, 'chime', { gain: .3 }], [P6TAP, 'click', { gain: .7 }], [DUR[6] - .4, 'whoosh_down', { gain: .45 }]],
+    update(t, $s, p, $$) { decoUpd($$, t); kickIn($s, t, .1); } },
+  /* 7. СУНДУК (3D, 3 с) */
+  { dur: DUR[7], bg: 'radial-gradient(circle at 50% 46%, #6fd6ff, #1cb0f6 45%, #0e7cc0)', ink: '#fff', hl: Y, hlInk: INK, trans: 'circle', cap: 'А за каждый урок — *награда*', capAt: .05,
+    html: `<svg class="abs" id="cry" style="left:0;top:0;z-index:0" width="160vw" height="160vw" viewBox="-50 -50 100 100">${rays(16, '#fff', .16)}</svg>
+      <div class="abs" id="csh" style="left:0;top:0;width:60vw;height:12vw;border-radius:50%;background:radial-gradient(closest-side,rgba(6,60,110,.42),rgba(6,60,110,.18) 55%,rgba(6,60,110,0));z-index:0;opacity:0"></div>
+      <div class="abs" id="cgl" style="left:0;top:0;width:80vw;height:80vw;border-radius:50%;background:radial-gradient(circle,rgba(255,236,150,.9),rgba(255,214,80,.3) 38%,rgba(255,214,80,0) 68%);mix-blend-mode:screen;z-index:2"></div>
+      ${GSP.map(() => `<div class="gsp">${STAR}</div>`).join('')}
+      <div class="abs" id="cbd" style="left:33vw;top:24vw;width:34vw;height:13vw;border-radius:6.5vw;background:#fff;box-shadow:0 1vw 0 rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;gap:1.8vw;font-size:7vw;font-weight:900;color:${B2};z-index:3">${ic('gem', B, 7, { sw: 2.2 })}<span id="cbn">+20</span></div>
+      <div style="position:relative;z-index:4">${K('★', Y2, 'Награда', '#fff')}</div>`,
+    sfx: [[.05, 'whoosh', { gain: .35 }], [.45, 'thud', { gain: .85 }], [.8, 'rise', { dur: .65, gain: .4 }], [1.45, 'success', { gain: .6 }], [1.5, 'sparkle', { gain: .5 }], [1.6, 'clink', { gain: .4, pan: -.3 }], [1.75, 'clink', { gain: .35, pan: .3 }], [1.9, 'clink', { gain: .3 }], [.3, 'pop', { gain: .4 }], [2.3, 'pop', { gain: .45 }], ...GSP.map((t, i) => [t, 'sparkle', { dur: .35, gain: .2, pan: -.4 + i * .2 }])],
+    mount(el) { el.parentNode.classList.add('s3d'); V7 = E3D.view(el, { light: 'product', keyPos: [-1.2, 10, 3.5], envBase: '#6a4a2a', envTop: '#fff2d0', beauty: 2, envIntensity: .85, bloom: { strength: .32, radius: .45, threshold: .9 }, shadowOpacity: 0, exposure: 1.0, fov: 30 }); buildChest(V7); },
+    update(t, $s, p, $$) { chestUpd(t, $s, $$); kickIn($s, t, -.25); } },
+  /* 8. ФИНАЛ */
+  { dur: DUR[8], bg: 'linear-gradient(170deg,#6bd80a,#58cc02 50%,#46a302)', ink: '#fff', hl: Y, hlInk: INK, trans: 'circle', cap: 'Успеешь за *5 минут?* Проверь сам', capAt: .95,
+    html: `<div class="abs" id="fcf" style="inset:0;z-index:0">${P.confetti(60, 33)}</div><div class="abs" id="fcf2" style="inset:0;z-index:0">${P.confetti(44, 57)}</div>
+      <div class="abs" id="flg" style="left:40.5vw;top:5vw;width:19vw;height:19vw"><div class="abs" style="left:1vw;top:1vw;right:1vw;bottom:1vw;border-radius:4vw;background:#65d306"></div><div class="abs" style="inset:0">${P.logo('Duolingo', 19, { color: '#fff' })}</div></div>
+      <div class="abs" id="fwm" style="left:0;right:0;top:24.5vw;text-align:center;font-size:15vw;font-weight:900;color:#fff;letter-spacing:-.02em;white-space:nowrap">${WM.map((c) => `<span class="wl">${c}</span>`).join('')}</div>
+      <div class="abs" id="fow" style="left:39vw;top:49.5vw;width:22vw;height:22vw;transform-origin:50% 100%;z-index:2">${hat}${owl(22)}</div>
+      <div class="abs" id="fds" style="left:29vw;top:${FCY - 21}vw;width:42vw;height:42vw;border-radius:50%;background:#fff;box-shadow:0 1.4vw 0 ${G2};z-index:3"></div>
+      <div class="btn" id="fbt" style="left:12vw;top:118vw;width:76vw;height:13vw;font-size:5.4vw">НАЧАТЬ БЕСПЛАТНО</div>
+      <div class="abs" id="ftc" style="left:0;top:0;width:100vw;height:178vw;z-index:30">${P.tapHTML()}</div>`,
+    sfx: [[.1, 'pop', { gain: .5 }], ...WM.map((_, i) => [WA(i) + .08, 'pop', { gain: .2, pan: -.4 + i * .11 }]), [.4, 'rise', { dur: .9, gain: .3 }], [.62, 'swell', { dur: .5, gain: .2 }], [.85, 'pop', { gain: .4 }], [1.32, 'chime', { gain: .5 }], [FTAP, 'click', { gain: .75 }], [FTAP + .05, 'sparkle', { gain: .45 }], [FTAP + .1, 'success', { gain: .45 }], [FTAP + .5, 'pop', { gain: .3 }], [3.1, 'chime', { gain: .22 }]],
+    mount(el) { capBreak(el, 'Проверь'); },
+    update(t, $s) {
+      const l = spring((t - .1) / .55); sx($s('#flg'), { s: l, y: Math.sin(t * 3) * .6, r: (1 - l) * -20 });
+      $s('#fwm').querySelectorAll('.wl').forEach((e, i) => { const k = spring((t - WA(i)) / .45), hop = Math.max(0, Math.sin(cl((t - FTAP - i * .04) / .3) * Math.PI)) * 1.4;
+        e.style.opacity = cl(k * 3); e.style.transform = `translateY(${(1 - k) * 7 - hop}vw) scale(${.3 + .7 * k})`; });
+      const d = spring((t - .15) / .55); sx($s('#fds'), { s: d * (1 + .02 * Math.sin(t * 4)) });
+      // сова выглядывает из-за таймера; на тап — прыжок и взмах крылом, дальше — покачивание
+      const ow = $s('#fow'), up = spring((t - .55) / .5), jump = Math.sin(Math.PI * seg(t, FTAP + .02, FTAP + .5)) * 4.5, land = Math.sin(Math.PI * seg(t, FTAP + .5, FTAP + .72));
+      const idle = t > 2.8 ? Math.abs(Math.sin((t - 2.8) * 3.4)) * 1.1 : 0;
+      ow.style.opacity = t < .55 ? 0 : 1;
+      ow.style.transform = `translateY(${(1 - up) * 26 - jump - idle}vw) scale(${1 + .07 * land},${1 - .09 * land}) rotate(${t > 2.8 ? Math.sin((t - 2.8) * 3.4) * 3 : 0}deg)`;
+      const wave = t > FTAP ? (t < FTAP + 1.1 ? -40 + Math.sin(t * 16) * 22 : -12 + Math.sin(t * 6) * 14) : 0;
+      ow.querySelector('.wingR').style.transform = `rotate(${wave}deg)`; ow.querySelector('.wingL').style.transform = `rotate(${t > FTAP ? 10 + Math.sin(t * 6 + 1) * 10 : 0}deg)`;
+      P.owlLook(ow, t < FTAP + .3 ? 2 : 0, t < FTAP + .3 ? 2.8 : .5, P.blink(t + .9));
+      const b = $s('#fbt'), press = t >= FTAP && t < FTAP + .12, bk = spring((t - .8) / .5);
+      btn(b, 'white', press); b.style.opacity = cl(bk * 2);
+      b.style.transform = `translateY(${press ? 1 : (1 - bk) * 8}vw) scale(${1 + (t > FTAP + .12 ? .035 * Math.sin((t - FTAP - .12) * 6) : 0)})`;
+      P.cfUpdate($s('#fcf'), t - .2, 50, 30, 80);
+      P.cfUpdate($s('#fcf2'), t - FTAP - .05, 50, 62, 75);
+      touch($s('#ftc'), t, [tap1(FTAP, 83, 126)]);
+    } },
+]});
+
+/* глобальные слои поверх сцен: телефон и таймер */
+document.getElementById('stage').insertAdjacentHTML('beforeend', LESSON + TIMER);
+const baseSet = window.__setTime;
+window.__setTime = (ms) => { baseSet(ms); const t = Math.min(ms / 1000, TOTAL - .001); drawLesson(t); drawTimer(t); };
+window.__setTime(0);
+</script></body></html>
